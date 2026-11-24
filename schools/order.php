@@ -1621,7 +1621,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="form-grid-two-col">
                         <div class="form-group">
-                            <label class="form-label" style="font-weight: 700;">Pincode (Trivandrum PIN: 695xxx) <span style="color: var(--wizard-accent);">*</span></label>
+                            <label class="form-label" style="font-weight: 700;">Pincode <span style="color: var(--wizard-accent);">*</span></label>
                             <input type="text" id="input-pincode" class="form-control" placeholder="Enter 6-digit pincode" required maxlength="6" value="" oninput="validatePincode(this.value)">
                             <div id="pincode-validation-msg" class="pincode-validation-msg" style="display: none;"></div>
                         </div>
@@ -2511,7 +2511,7 @@ require_once __DIR__ . '/../includes/header.php';
         }
     }
 
-    // Trivandrum PIN Code Instant Validation (Diagram 2)
+    // PIN Code Validation (All India PIN Codes Supported)
     function validatePincode(pin) {
         const msgEl = document.getElementById('pincode-validation-msg');
         if (!msgEl) return;
@@ -2520,20 +2520,29 @@ require_once __DIR__ . '/../includes/header.php';
             msgEl.style.display = 'none';
             return;
         }
-        msgEl.style.display = 'block';
-        if (/^695\d{3}$/.test(cleanPin)) {
-            msgEl.className = 'pincode-validation-msg ok';
-            msgEl.innerHTML = '✓ <strong>Serviceable Area:</strong> Trivandrum District Delivery available.';
+        if (/^[1-9][0-9]{5}$/.test(cleanPin)) {
+            msgEl.style.display = 'none';
+            // Auto-populate City & State if empty
             const cityField = document.getElementById('input-district-state');
-            if (cityField && (!cityField.value || cityField.value.includes('Trivandrum'))) {
-                cityField.value = 'Trivandrum, Kerala';
+            if (cityField && !cityField.value.trim()) {
+                fetch(`https://api.postalpincode.in/pincode/${cleanPin}`)
+                    .then(r => r.json())
+                    .then(data => {
+                        if (data && data[0] && data[0].Status === 'Success' && data[0].PostOffice && data[0].PostOffice.length > 0) {
+                            const po = data[0].PostOffice[0];
+                            if (cityField && !cityField.value.trim()) {
+                                cityField.value = `${po.District || po.Name}, ${po.State}`;
+                            }
+                        }
+                    })
+                    .catch(() => {});
             }
-        } else if (/^\d{6}$/.test(cleanPin)) {
-            msgEl.className = 'pincode-validation-msg warn';
-            msgEl.innerHTML = 'ℹ <strong>Standard Dispatch:</strong> Outside Trivandrum Urban zone (Kerala Speed Post/Courier).';
-        } else {
+        } else if (cleanPin.length >= 6) {
+            msgEl.style.display = 'block';
             msgEl.className = 'pincode-validation-msg error';
             msgEl.innerHTML = '⚠️ Please enter a valid 6-digit PIN code.';
+        } else {
+            msgEl.style.display = 'none';
         }
     }
 
@@ -2991,8 +3000,8 @@ Please confirm this order. Thank you!`;
             alt_mobile: state.parentDetails.altMobile || '',
             email: state.parentDetails.email || 'parent@example.com',
             delivery_address: state.parentDetails.address || 'Campus Counter Delivery',
-            pincode: state.parentDetails.pincode || '695001',
-            state_district: state.parentDetails.districtState || 'Trivandrum, Kerala',
+            pincode: state.parentDetails.pincode || '',
+            state_district: state.parentDetails.districtState || '',
             items: itemsPayload,
             payment_method: finalMethod,
             payment_status: 'Pending'

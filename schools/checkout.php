@@ -41,7 +41,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $altMobile = trim($_POST['alt_mobile'] ?? '');
         $email = trim($_POST['email'] ?? ($parent['email'] ?? ''));
         $address = trim($_POST['delivery_address'] ?? 'Campus Pickup / Direct Delivery');
-        $pincode = trim($_POST['pincode'] ?? '695582');
+        $pincode = trim($_POST['pincode'] ?? '');
         $paymentMethod = trim($_POST['payment_method'] ?? 'WhatsApp / Offline Requisition');
 
         // Find selected student details
@@ -258,7 +258,7 @@ require_once __DIR__ . '/../includes/header.php';
 
                     <div class="form-group" style="max-width:240px;">
                         <label class="form-label">Postal Pincode</label>
-                        <input type="text" name="pincode" value="695582" class="form-control">
+                        <input type="text" name="pincode" placeholder="Enter 6-digit pincode" maxlength="6" class="form-control">
                     </div>
 
                     <!-- 3. Payment Method -->
