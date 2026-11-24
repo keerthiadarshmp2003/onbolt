@@ -1,0 +1,37 @@
+# OnBolt Platform - Apache URL Rewriting Engine
+RewriteEngine On
+RewriteBase /onbolt/
+
+# Exclude existing files and directories
+RewriteCond %{REQUEST_FILENAME} -f [OR]
+RewriteCond %{REQUEST_FILENAME} -d
+RewriteRule ^ - [L]
+
+# Clean Public Routes
+RewriteRule ^about/?$ pages/about.php [L,QSA]
+RewriteRule ^categories/?$ pages/categories.php [L,QSA]
+RewriteRule ^portfolio/?$ pages/portfolio.php [L,QSA]
+RewriteRule ^corporate/?$ pages/corporate.php [L,QSA]
+RewriteRule ^gifts/?$ pages/gifts.php [L,QSA]
+RewriteRule ^contact/?$ pages/contact.php [L,QSA]
+RewriteRule ^privacy/?$ pages/privacy.php [L,QSA]
+RewriteRule ^terms/?$ pages/terms.php [L,QSA]
+
+# Parent Login & Direct Ordering Portal
+RewriteRule ^login/?$ schools/login.php [L,QSA]
+RewriteRule ^portal/?$ schools/order.php [L,QSA]
+RewriteRule ^schools/payment-success/?$ schools/payment-success.php [L,QSA]
+
+# School Directory
+RewriteRule ^schools/?$ schools/index.php [L,QSA]
+
+# School Portal Subpaths
+RewriteRule ^schools/([^/]+)/login/?$ schools/login.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/logout/?$ schools/logout.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/dashboard/?$ schools/dashboard.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/order/?$ schools/order.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/cart/?$ schools/cart.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/checkout/?$ schools/checkout.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/orders/?$ schools/orders.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/profile/?$ schools/profile.php?school=$1 [L,QSA]
+RewriteRule ^schools/([^/]+)/?$ schools/details.php?school=$1 [L,QSA]

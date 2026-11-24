@@ -1,0 +1,29 @@
+# Operating System files
+Thumbs.db
+Thumbs.db:encryptable
+ehthumbs.db
+ehthumbs_vista.db
+*.stackdump
+[Dd]esktop.ini
+.DS_Store
+._*
+.Spotlight-V100
+.Trashes
+
+# Editor & IDE configurations
+.idea/
+.vscode/
+*.swp
+*.swo
+*~
+
+# Temporary & Log files
+*.log
+scratch/
+scratch_db.php
+check_parents.php
+test_post_single.html
+
+# Database dumps (exclude large historical recovery files, retain onbolt_latest.sql & onbolt.sql)
+database/onbolt_management_dump_recovery.sql
+database/onbolt_website_dump_recovery.sql

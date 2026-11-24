@@ -1,0 +1,138 @@
+{
+  "$schema": "https://openapi.vercel.sh/vercel.json",
+  "functions": {
+    "api/**/*.php": {
+      "runtime": "vercel-php@0.7.3"
+    },
+    "schools/**/*.php": {
+      "runtime": "vercel-php@0.7.3"
+    },
+    "admin/**/*.php": {
+      "runtime": "vercel-php@0.7.3"
+    },
+    "pages/**/*.php": {
+      "runtime": "vercel-php@0.7.3"
+    },
+    "*.php": {
+      "runtime": "vercel-php@0.7.3"
+    }
+  },
+  "routes": [
+    {
+      "src": "/assets/(.*)",
+      "dest": "/assets/$1"
+    },
+    {
+      "src": "/uploads/(.*)",
+      "dest": "/uploads/$1"
+    },
+    {
+      "src": "/about/?",
+      "dest": "/about.php"
+    },
+    {
+      "src": "/categories/?",
+      "dest": "/categories.php"
+    },
+    {
+      "src": "/portfolio/?",
+      "dest": "/portfolio.php"
+    },
+    {
+      "src": "/corporate/?",
+      "dest": "/corporate.php"
+    },
+    {
+      "src": "/gifts/?",
+      "dest": "/gifts.php"
+    },
+    {
+      "src": "/contact/?",
+      "dest": "/contact.php"
+    },
+    {
+      "src": "/privacy/?",
+      "dest": "/privacy.php"
+    },
+    {
+      "src": "/terms/?",
+      "dest": "/terms.php"
+    },
+    {
+      "src": "/login/?",
+      "dest": "/schools/login.php"
+    },
+    {
+      "src": "/portal/?",
+      "dest": "/schools/order.php"
+    },
+    {
+      "src": "/schools/payment-success/?",
+      "dest": "/schools/payment-success.php"
+    },
+    {
+      "src": "/schools/?$",
+      "dest": "/schools/index.php"
+    },
+    {
+      "src": "/schools/([^/]+)/login/?",
+      "dest": "/schools/login.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/logout/?",
+      "dest": "/schools/logout.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/dashboard/?",
+      "dest": "/schools/dashboard.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/order/?",
+      "dest": "/schools/order.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/cart/?",
+      "dest": "/schools/cart.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/checkout/?",
+      "dest": "/schools/checkout.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/orders/?",
+      "dest": "/schools/orders.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/profile/?",
+      "dest": "/schools/profile.php?school=$1"
+    },
+    {
+      "src": "/schools/([^/]+)/?",
+      "dest": "/schools/details.php?school=$1"
+    },
+    {
+      "src": "/admin/(.*)",
+      "dest": "/admin/$1"
+    },
+    {
+      "src": "/admin/?$",
+      "dest": "/admin/index.php"
+    },
+    {
+      "src": "/api/(.*)",
+      "dest": "/api/$1"
+    },
+    {
+      "src": "/track-order/?",
+      "dest": "/track-order.php"
+    },
+    {
+      "src": "/$",
+      "dest": "/index.php"
+    },
+    {
+      "src": "/(.*)",
+      "dest": "/$1"
+    }
+  ]
+}
