@@ -19,28 +19,34 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/database.php';
 
 // Detect Base URL dynamically with proxy SSL support & cloud host detection
-$isHttps = false;
-if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
-    $isHttps = true;
-} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
-    $isHttps = true;
-} elseif (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
-    $isHttps = true;
-} elseif (!empty($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false || strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)) {
-    $isHttps = true;
-}
-$protocol = $isHttps ? "https://" : "http://";
-$host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-
-// Normalize root path: only use /onbolt when on localhost XAMPP
-$requestUri = $_SERVER['REQUEST_URI'] ?? '';
-$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
-if (strpos($requestUri, '/onbolt') !== false || strpos($scriptName, '/onbolt') !== false) {
-    $basePath = '/onbolt';
+if (getenv('APP_URL')) {
+    define('BASE_URL', rtrim(getenv('APP_URL'), '/'));
+} elseif (getenv('BASE_URL')) {
+    define('BASE_URL', rtrim(getenv('BASE_URL'), '/'));
 } else {
-    $basePath = '';
+    $isHttps = false;
+    if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+        $isHttps = true;
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+        $isHttps = true;
+    } elseif (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+        $isHttps = true;
+    } elseif (!empty($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false || strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)) {
+        $isHttps = true;
+    }
+    $protocol = $isHttps ? "https://" : "http://";
+    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+
+    // Normalize root path: only use /onbolt when on localhost XAMPP
+    $requestUri = $_SERVER['REQUEST_URI'] ?? '';
+    $scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+    if (strpos($requestUri, '/onbolt') !== false || strpos($scriptName, '/onbolt') !== false) {
+        $basePath = '/onbolt';
+    } else {
+        $basePath = '';
+    }
+    define('BASE_URL', rtrim($protocol . $host . $basePath, '/'));
 }
-define('BASE_URL', rtrim($protocol . $host . $basePath, '/'));
 define('ROOT_PATH', dirname(__DIR__));
 
 // Brand Palette (Derived precisely from OnBolt Actual Logo)
