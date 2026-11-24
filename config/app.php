@@ -18,16 +18,25 @@ if (session_status() === PHP_SESSION_NONE) {
 
 require_once __DIR__ . '/database.php';
 
-// Detect Base URL dynamically with proxy SSL support
-$isHttps = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') 
-    || (isset($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https');
+// Detect Base URL dynamically with proxy SSL support & cloud host detection
+$isHttps = false;
+if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
+    $isHttps = true;
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_PROTO']) && $_SERVER['HTTP_X_FORWARDED_PROTO'] === 'https') {
+    $isHttps = true;
+} elseif (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
+    $isHttps = true;
+} elseif (!empty($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false || strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)) {
+    $isHttps = true;
+}
 $protocol = $isHttps ? "https://" : "http://";
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
-$scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 
-// Normalize root path: only use subfolder if inside /onbolt (local XAMPP), otherwise root domain is empty
-if (strpos($scriptDir, '/onbolt') !== false) {
-    $basePath = substr($scriptDir, 0, strpos($scriptDir, '/onbolt') + 7);
+// Normalize root path: only use /onbolt when on localhost XAMPP
+$requestUri = $_SERVER['REQUEST_URI'] ?? '';
+$scriptName = $_SERVER['SCRIPT_NAME'] ?? '';
+if (strpos($requestUri, '/onbolt') !== false || strpos($scriptName, '/onbolt') !== false) {
+    $basePath = '/onbolt';
 } else {
     $basePath = '';
 }
