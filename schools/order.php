@@ -1876,6 +1876,42 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
+<!-- ==================== DELETE CONFIRMATION MODAL ==================== -->
+<div class="modal-backdrop" id="portal-confirm-delete-modal" style="display:none; z-index:99999;" onclick="if(event.target===this)closeConfirmDeleteModal();">
+    <div class="modal-box" style="max-width: 440px; padding: 2.25rem 2rem; text-align: center; border-radius: 24px; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.25); border: 1px solid #E2E8F0; position: relative;">
+        <!-- Close button (x) -->
+        <button type="button" class="modal-close-btn" onclick="closeConfirmDeleteModal()" aria-label="Close" style="position:absolute; top:1.1rem; right:1.1rem; width:34px; height:34px; border-radius:50%; border:none; background:#F8FAFC; color:#64748B; font-size:1.3rem; cursor:pointer; display:flex; align-items:center; justify-content:center; transition:0.2s;">&times;</button>
+        
+        <!-- Trash / Warning Icon -->
+        <div style="width: 68px; height: 68px; border-radius: 50%; background: #FEF2F2; color: #EF4444; display: inline-flex; align-items: center; justify-content: center; margin: 0 auto 1.25rem; box-shadow: 0 0 0 8px rgba(239, 68, 68, 0.08);">
+            <svg width="32" height="32" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                <polyline points="3 6 5 6 21 6"></polyline>
+                <path d="M19 6v14a2 2 0 0 1-2 2H7a2 2 0 0 1-2-2V6m3 0V4a2 2 0 0 1 2-2h4a2 2 0 0 1 2 2v2"></path>
+                <line x1="10" y1="11" x2="10" y2="17"></line>
+                <line x1="14" y1="11" x2="14" y2="17"></line>
+            </svg>
+        </div>
+
+        <!-- Title -->
+        <h3 style="margin: 0 0 0.6rem; font-size: 1.25rem; font-weight: 800; color: #1E2530; letter-spacing: -0.01em;">Remove Item from Order?</h3>
+
+        <!-- Item Confirmation Details -->
+        <p id="confirm-delete-item-msg" style="margin: 0 0 1.75rem; font-size: 0.95rem; line-height: 1.55; color: #64748B;">
+            Are you sure you want to remove this garment from your requisition?
+        </p>
+
+        <!-- Two Buttons: Cancel & Yes, Delete -->
+        <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
+            <button type="button" class="btn btn-outline" onclick="closeConfirmDeleteModal()" style="padding: 0.8rem 1rem; border-radius: 9999px; font-weight: 700; cursor: pointer; justify-content: center;">
+                Cancel
+            </button>
+            <button type="button" id="btn-confirm-delete-yes" onclick="executeConfirmedDelete()" style="padding: 0.8rem 1rem; background: #EF4444; color: #ffffff; border: none; border-radius: 9999px; font-weight: 800; font-size: 0.95rem; cursor: pointer; box-shadow: 0 4px 14px rgba(239, 68, 68, 0.35); transition: all 0.2s ease;">
+                Yes, Delete
+            </button>
+        </div>
+    </div>
+</div>
+
 <!-- ==================== SIZING GUIDE MODAL ==================== -->
 <div class="modal-backdrop" id="portal-size-chart-modal">
     <div class="modal-box" style="max-width: 1040px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 1.75rem;">
@@ -2794,7 +2830,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <td style="text-align:right;">₹${it.price.toLocaleString('en-IN')}</td>
                 <td style="text-align:right; font-weight:800; color:var(--wizard-accent);" id="review-row-total-${pid}">₹${lineTotal.toLocaleString('en-IN')}</td>
                 <td style="text-align:center; width:44px; vertical-align:middle;">
-                    <button type="button" class="btn-cancel-item" onclick="removeReviewItem(${pid})" title="Remove ${it.name.replace(/"/g, '&quot;')}">
+                    <button type="button" class="btn-cancel-item" onclick="confirmRemoveReviewItem(${pid})" title="Remove ${it.name.replace(/"/g, '&quot;')}">
                         ✕
                     </button>
                 </td>
@@ -2869,6 +2905,42 @@ require_once __DIR__ . '/../includes/header.php';
 
         // Sync Step 2 summary badge and sticky bar
         updateStepTwoActionBar();
+    }
+
+    // ==================== DELETE CONFIRMATION MODAL CONTROLLER ====================
+    let pendingDeletePid = null;
+
+    function confirmRemoveReviewItem(pid) {
+        if (!state.selectedProducts[pid]) return;
+        pendingDeletePid = pid;
+        const it = state.selectedProducts[pid];
+        const msgEl = document.getElementById('confirm-delete-item-msg');
+        if (msgEl) {
+            const sizeLabel = it.size ? ` (Size: ${it.size})` : '';
+            msgEl.innerHTML = `Are you sure you want to remove <strong>${it.name}</strong>${sizeLabel} from your order requisition?`;
+        }
+        const modal = document.getElementById('portal-confirm-delete-modal');
+        if (modal) {
+            modal.classList.add('open');
+            modal.style.display = 'flex';
+        }
+    }
+
+    function closeConfirmDeleteModal() {
+        pendingDeletePid = null;
+        const modal = document.getElementById('portal-confirm-delete-modal');
+        if (modal) {
+            modal.classList.remove('open');
+            modal.style.display = 'none';
+        }
+    }
+
+    function executeConfirmedDelete() {
+        if (pendingDeletePid) {
+            const pid = pendingDeletePid;
+            closeConfirmDeleteModal();
+            removeReviewItem(pid);
+        }
     }
 
     // Cancel / Delete Product from Requisition (Cross X Button)
