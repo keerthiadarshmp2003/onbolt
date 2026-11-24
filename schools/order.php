@@ -809,6 +809,85 @@ require_once __DIR__ . '/../includes/header.php';
     color: var(--wizard-dark);
   }
 
+  /* Inline Quantity Edit Pencil Button & Editable Box */
+  .btn-pencil-qty {
+    border: none;
+    background: rgba(255, 103, 2, 0.1);
+    color: #FF6702;
+    border-radius: 6px;
+    padding: 3px 6px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-pencil-qty:hover {
+    background: #FF6702;
+    color: #ffffff;
+    transform: scale(1.12);
+  }
+  .inline-edit-qty-input {
+    width: 52px;
+    height: 32px;
+    padding: 2px 6px;
+    border: 2px solid #FF6702;
+    border-radius: 6px;
+    font-weight: 800;
+    font-size: 0.95rem;
+    text-align: center;
+    background: #ffffff;
+    color: #1E293B;
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(255, 103, 2, 0.18);
+  }
+  .inline-edit-qty-input::-webkit-inner-spin-button,
+  .inline-edit-qty-input::-webkit-outer-spin-button {
+    opacity: 1;
+  }
+
+  /* Cancel / Delete Cross (X) Button */
+  .btn-check-qty {
+    border: none;
+    background: #10B981;
+    color: #ffffff;
+    border-radius: 6px;
+    width: 24px;
+    height: 24px;
+    cursor: pointer;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+  }
+  .btn-check-qty:hover {
+    background: #059669;
+    transform: scale(1.1);
+  }
+
+  .btn-cancel-item {
+    border: none;
+    background: rgba(239, 68, 68, 0.1);
+    color: #EF4444;
+    width: 28px;
+    height: 28px;
+    border-radius: 50%;
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+    font-size: 14px;
+    font-weight: 800;
+    cursor: pointer;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+    line-height: 1;
+  }
+  .btn-cancel-item:hover {
+    background: #EF4444;
+    color: #ffffff;
+    transform: scale(1.15);
+    box-shadow: 0 2px 8px rgba(239, 68, 68, 0.35);
+  }
+
   .btn-whatsapp-order {
     background: #25D366;
     color: #ffffff;
@@ -1724,6 +1803,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <th>Quantity</th>
                                 <th style="text-align: right;">Unit Price</th>
                                 <th style="text-align: right;">Total</th>
+                                <th style="width: 44px; text-align: center;"></th>
                             </tr>
                         </thead>
                         <tbody id="review-items-tbody">
@@ -1735,6 +1815,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <td id="review-total-items-badge" style="padding: 1rem;">0</td>
                                 <td style="text-align: right; padding: 1rem;">Estimated Total:</td>
                                 <td id="review-total-amount" style="text-align: right; padding: 1rem; color: var(--wizard-accent); font-size: 1.25rem;">₹0</td>
+                                <td style="width: 44px;"></td>
                             </tr>
                         </tfoot>
                     </table>
@@ -2651,7 +2732,24 @@ require_once __DIR__ . '/../includes/header.php';
         let totalAmount = 0;
         let idx = 1;
 
-        for (const pid in state.selectedProducts) {
+        const pids = Object.keys(state.selectedProducts);
+        if (pids.length === 0) {
+            tbody.innerHTML = `
+                <tr>
+                    <td colspan="7" style="text-align:center; padding:2.5rem 1rem; color:var(--wizard-muted);">
+                        <div style="font-size:2rem; margin-bottom:0.5rem;">🛍️</div>
+                        <div style="font-size:1.05rem; font-weight:800; color:var(--wizard-dark); margin-bottom:0.35rem;">No uniform items in your requisition</div>
+                        <p style="font-size:0.85rem; margin-bottom:1rem;">All garments have been removed from this order.</p>
+                        <button type="button" class="btn btn-primary btn-sm" onclick="goToStep(2)">← Go Back to Choose Products</button>
+                    </td>
+                </tr>
+            `;
+            document.getElementById('review-total-items-badge').textContent = '0';
+            document.getElementById('review-total-amount').textContent = '₹0';
+            return;
+        }
+
+        for (const pid of pids) {
             const it = state.selectedProducts[pid];
             const lineTotal = it.price * it.quantity;
             totalItems += it.quantity;
@@ -2667,6 +2765,7 @@ require_once __DIR__ . '/../includes/header.php';
             });
 
             const tr = document.createElement('tr');
+            tr.id = `review-row-${pid}`;
             tr.innerHTML = `
                 <td style="color:var(--wizard-muted);">${idx++}</td>
                 <td>
@@ -2678,15 +2777,133 @@ require_once __DIR__ . '/../includes/header.php';
                         ${optionsHtml}
                     </select>
                 </td>
-                <td style="font-weight:800;">${it.quantity}</td>
+                <td>
+                    <div style="display:inline-flex; align-items:center; gap:6px;">
+                        <span id="qty-text-${pid}" style="font-weight:800; font-size:0.95rem;">${it.quantity}</span>
+                        <button type="button" class="btn-pencil-qty" id="pencil-btn-${pid}" onclick="enableInlineQtyEdit(${pid})" title="Edit quantity">
+                            <svg width="13" height="13" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.3" stroke-linecap="round" stroke-linejoin="round"><path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"></path></svg>
+                        </button>
+                        <div id="qty-box-wrap-${pid}" style="display:none; align-items:center; gap:4px;">
+                            <input type="number" id="inline-qty-input-${pid}" min="1" max="99" value="${it.quantity}" class="inline-edit-qty-input" onkeydown="if(event.key==='Enter')saveInlineQty(${pid}, this.value);" onblur="saveInlineQty(${pid}, this.value)">
+                            <button type="button" class="btn-check-qty" onmousedown="event.preventDefault();" onclick="saveInlineQty(${pid}, document.getElementById('inline-qty-input-${pid}').value)" title="Save quantity">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            </button>
+                        </div>
+                    </div>
+                </td>
                 <td style="text-align:right;">₹${it.price.toLocaleString('en-IN')}</td>
-                <td style="text-align:right; font-weight:800; color:var(--wizard-accent);">₹${lineTotal.toLocaleString('en-IN')}</td>
+                <td style="text-align:right; font-weight:800; color:var(--wizard-accent);" id="review-row-total-${pid}">₹${lineTotal.toLocaleString('en-IN')}</td>
+                <td style="text-align:center; width:44px; vertical-align:middle;">
+                    <button type="button" class="btn-cancel-item" onclick="removeReviewItem(${pid})" title="Remove ${it.name.replace(/"/g, '&quot;')}">
+                        ✕
+                    </button>
+                </td>
             `;
             tbody.appendChild(tr);
         }
 
         document.getElementById('review-total-items-badge').textContent = totalItems;
         document.getElementById('review-total-amount').textContent = '₹' + totalAmount.toLocaleString('en-IN');
+    }
+
+    // Toggle Quantity to Editable Box Mode (Click Pencil Button)
+    function enableInlineQtyEdit(pid) {
+        const textEl = document.getElementById('qty-text-' + pid);
+        const pencilBtn = document.getElementById('pencil-btn-' + pid);
+        const boxWrap = document.getElementById('qty-box-wrap-' + pid);
+        const inputEl = document.getElementById('inline-qty-input-' + pid);
+
+        if (textEl && pencilBtn && boxWrap && inputEl) {
+            textEl.style.display = 'none';
+            pencilBtn.style.display = 'none';
+            boxWrap.style.display = 'inline-flex';
+            inputEl.focus();
+            inputEl.select();
+        }
+    }
+
+    // Save Edited Quantity & Recalculate Totals
+    function saveInlineQty(pid, val) {
+        if (!state.selectedProducts[pid]) return;
+        let qty = parseInt(val, 10);
+        if (isNaN(qty) || qty < 1) qty = 1;
+        if (qty > 99) qty = 99;
+
+        state.selectedProducts[pid].quantity = qty;
+
+        // Synchronize with Step 2 card input and display
+        const cardQtyInput = document.getElementById('qty-' + pid);
+        if (cardQtyInput) cardQtyInput.value = qty;
+        const cardDisplayQty = document.getElementById('display-qty-' + pid);
+        if (cardDisplayQty) cardDisplayQty.textContent = qty;
+
+        // Update Step 4 line total
+        const lineTotal = state.selectedProducts[pid].price * qty;
+        const rowTotalEl = document.getElementById('review-row-total-' + pid);
+        if (rowTotalEl) rowTotalEl.textContent = '₹' + lineTotal.toLocaleString('en-IN');
+
+        const textEl = document.getElementById('qty-text-' + pid);
+        const pencilBtn = document.getElementById('pencil-btn-' + pid);
+        const boxWrap = document.getElementById('qty-box-wrap-' + pid);
+        const inputEl = document.getElementById('inline-qty-input-' + pid);
+
+        if (textEl) {
+            textEl.textContent = qty;
+            textEl.style.display = 'inline';
+        }
+        if (pencilBtn) pencilBtn.style.display = 'inline-flex';
+        if (boxWrap) boxWrap.style.display = 'none';
+        if (inputEl) inputEl.value = qty;
+
+        // Recalculate totals
+        let totalItems = 0;
+        let grandTotal = 0;
+        for (const p in state.selectedProducts) {
+            totalItems += state.selectedProducts[p].quantity;
+            grandTotal += state.selectedProducts[p].price * state.selectedProducts[p].quantity;
+        }
+        const badge = document.getElementById('review-total-items-badge');
+        if (badge) badge.textContent = totalItems;
+        const totalAmountEl = document.getElementById('review-total-amount');
+        if (totalAmountEl) totalAmountEl.textContent = '₹' + grandTotal.toLocaleString('en-IN');
+
+        // Sync Step 2 summary badge and sticky bar
+        updateStepTwoActionBar();
+    }
+
+    // Cancel / Delete Product from Requisition (Cross X Button)
+    function removeReviewItem(pid) {
+        if (!state.selectedProducts[pid]) return;
+
+        // Remove from state
+        delete state.selectedProducts[pid];
+
+        // Deselect in Step 2 card
+        const card = document.getElementById('card-prod-' + pid);
+        if (card) {
+            card.classList.remove('selected');
+            const selectBtn = card.querySelector('.product-select-toggle-btn');
+            if (selectBtn) {
+                selectBtn.classList.remove('selected');
+                selectBtn.innerHTML = '<span class="select-btn-label">Select</span>';
+            }
+            card.querySelectorAll('.size-chip').forEach(c => c.classList.remove('active'));
+            const sizeInput = document.getElementById('selected-size-' + pid);
+            if (sizeInput) sizeInput.value = '';
+            const sizeStatus = card.querySelector('.size-status-text');
+            if (sizeStatus) {
+                sizeStatus.className = 'size-status-text missing';
+                sizeStatus.textContent = "Size didn't select";
+            }
+            const cardQtyInput = document.getElementById('qty-' + pid);
+            if (cardQtyInput) cardQtyInput.value = 1;
+        }
+
+        // Re-render Step 4 verification table
+        populateStepFourVerification();
+
+        // Sync Step 2 summary bar
+        updateStepTwoActionBar();
     }
 
     // Generate Official Vector PDF Invoice
