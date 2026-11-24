@@ -278,7 +278,7 @@ function addToCart(int $schoolId, int $productId, string $size, int $quantity = 
             'size'           => $size,
             'color'          => $color,
             'quantity'       => $quantity,
-            'featured_image' => $item['featured_image'] ?: 'assets/images/home/630px-x-420px-Catogary-Uniforms-1.webp'
+            'featured_image' => $item['featured_image'] ?: 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png'
         ];
     }
     return true;

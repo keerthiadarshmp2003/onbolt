@@ -59,7 +59,7 @@ require_once __DIR__ . '/includes/header.php';
             <?php foreach ($allProducts as $p): ?>
                 <div class="product-item-card">
                     <div class="product-thumb-box">
-                        <img src="<?= BASE_URL ?>/<?= sanitize($p['featured_image'] ?: 'assets/images/home/630px-x-420px-Catogary-Uniforms-1.webp') ?>" alt="<?= sanitize($p['name']) ?>">
+                        <img src="<?= BASE_URL ?>/<?= sanitize($p['featured_image'] ?: 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png') ?>" alt="<?= sanitize($p['name']) ?>">
                         <?php if ($p['is_kit']): ?>
                             <span class="product-mandatory-pill">Complete Kit</span>
                         <?php endif; ?>

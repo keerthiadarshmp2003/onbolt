@@ -26,7 +26,7 @@ require_once __DIR__ . '/../includes/header.php';
 ?>
 
 <!-- School Hero Banner -->
-<div style="position:relative; padding-top:160px; padding-bottom:90px; background:linear-gradient(135deg, rgba(11, 19, 43, 0.92) 0%, rgba(58, 91, 160, 0.88) 100%), url('<?= BASE_URL ?>/<?= sanitize($school['banner_image'] ?: 'assets/images/home/540-pixel-x-836-pixel-1.webp') ?>') center/cover; color:#ffffff;">
+<div style="position:relative; padding-top:160px; padding-bottom:90px; background:linear-gradient(135deg, rgba(11, 19, 43, 0.92) 0%, rgba(58, 91, 160, 0.88) 100%), url('<?= BASE_URL ?>/<?= sanitize($school['banner_image'] ?: 'assets/images/breadcrumb-bg.webp') ?>') center/cover; color:#ffffff;">
     <div class="container">
         <div style="display:flex; align-items:center; gap:2.5rem; flex-wrap:wrap;">
             <div style="width:110px; height:110px; background:#fff; border-radius:var(--radius-lg); padding:10px; box-shadow:var(--shadow-xl); flex-shrink:0; display:flex; align-items:center; justify-content:center;">
@@ -92,7 +92,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php foreach ($schoolProducts as $p): ?>
                 <div class="product-item-card">
                     <div class="product-thumb-box">
-                        <img src="<?= BASE_URL ?>/<?= sanitize($p['featured_image'] ?: 'assets/images/home/630px-x-420px-Catogary-Uniforms-1.webp') ?>" alt="<?= sanitize($p['name']) ?>">
+                        <img src="<?= BASE_URL ?>/<?= sanitize($p['featured_image'] ?: 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png') ?>" alt="<?= sanitize($p['name']) ?>">
                     </div>
                     <div class="product-card-details">
                         <span style="font-size:0.75rem; font-weight:800; color:var(--brand-muted); text-transform:uppercase; letter-spacing:0.05em;"><?= sanitize($p['category_name'] ?: 'Uniform') ?></span>

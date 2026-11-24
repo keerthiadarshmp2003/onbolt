@@ -49,7 +49,7 @@ require_once __DIR__ . '/../includes/header.php';
             <?php foreach ($allSchools as $sch): ?>
                 <div class="school-card-editorial school-item-card" data-name="<?= strtolower(sanitize($sch['name'])) ?>" data-city="<?= strtolower(sanitize($sch['city'] . ' ' . $sch['location'])) ?>">
                     <div class="school-card-hero">
-                        <img src="<?= BASE_URL ?>/<?= sanitize($sch['banner_image'] ?: 'assets/images/home/540-pixel-x-836-pixel-1.webp') ?>" alt="<?= sanitize($sch['name']) ?>">
+                        <img src="<?= BASE_URL ?>/<?= sanitize($sch['banner_image'] ?: 'assets/images/breadcrumb-bg.webp') ?>" alt="<?= sanitize($sch['name']) ?>">
                         <div class="school-logo-badge">
                             <img src="<?= BASE_URL ?>/<?= sanitize($sch['logo'] ?: 'assets/images/logo/cropped-favicon-1-96x96.png') ?>" alt="<?= sanitize($sch['name']) ?> Logo">
                         </div>

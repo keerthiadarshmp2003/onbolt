@@ -181,7 +181,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <?php foreach (array_slice($schoolProducts, 0, 4) as $prod): ?>
                     <div class="product-item-card">
                         <div class="product-thumb-box">
-                            <img src="<?= BASE_URL ?>/<?= sanitize($prod['featured_image'] ?: 'assets/images/home/630px-x-420px-Catogary-Uniforms-1.webp') ?>" alt="<?= sanitize($prod['name']) ?>">
+                            <img src="<?= BASE_URL ?>/<?= sanitize($prod['featured_image'] ?: 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png') ?>" alt="<?= sanitize($prod['name']) ?>">
                         </div>
                         <div class="product-card-details">
                             <span style="font-size:0.75rem; text-transform:uppercase; font-weight:800; color:var(--brand-muted);"><?= sanitize($prod['category_name'] ?: 'Uniform') ?></span>

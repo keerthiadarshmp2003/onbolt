@@ -1226,13 +1226,7 @@ require_once __DIR__ . '/../includes/header.php';
                      data-group="<?= sanitize($prod['uniform_group'] ?? 'academic') ?>"
                      data-sizes="<?= sanitize($prod['available_sizes'] ?? '24,26,28,30,32,34,36') ?>">
                     <div class="product-media-wrap">
-                        <?php 
-                            $webpCandidate = preg_replace('/\.(png|jpe?g)$/i', '.webp', $prod['featured_image']);
-                        ?>
-                        <picture>
-                            <source srcset="<?= BASE_URL ?>/<?= sanitize($webpCandidate) ?>" type="image/webp">
-                            <img src="<?= BASE_URL ?>/<?= sanitize($prod['featured_image']) ?>" alt="<?= sanitize($prod['name']) ?>" loading="lazy" decoding="async">
-                        </picture>
+                        <img src="<?= BASE_URL ?>/<?= sanitize($prod['featured_image']) ?>" alt="<?= sanitize($prod['name']) ?>" loading="lazy" decoding="async">
                     </div>
                     <div class="product-card-body">
                         <div class="product-top-row">
