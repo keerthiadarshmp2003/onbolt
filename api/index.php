@@ -41,8 +41,8 @@ function serveFile(string $filePath, array $queryParams = []) {
 }
 
 // 1. Root / Homepage
-if ($path === '' || $path === 'index.php') {
-    serveFile($rootDir . '/index.php');
+if ($path === '' || $path === 'index.php' || $path === 'home.php') {
+    serveFile($rootDir . '/home.php');
 }
 
 // 2. Exact PHP files on disk (e.g., admin/login.php, admin/catalog_overview.php, schools/payment_callback.php)
