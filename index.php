@@ -91,9 +91,9 @@ require_once __DIR__ . '/includes/header.php';
                 <!-- Authentic Institutional Social Proof Avatars from onboltlive.com -->
                 <div style="display:flex; align-items:center; gap:1rem; margin-top:1.5rem; margin-bottom:1.5rem;">
                     <div style="display:flex; margin-left:0.5rem;">
-                        <img src="<?= BASE_URL ?>/assets/images/home/author-1.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
-                        <img src="<?= BASE_URL ?>/assets/images/home/author-2.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
-                        <img src="<?= BASE_URL ?>/assets/images/home/author-3.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
+                        <img src="<?= BASE_URL ?>/assets/images/home/author-1-1.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
+                        <img src="<?= BASE_URL ?>/assets/images/home/author-2-1.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
+                        <img src="<?= BASE_URL ?>/assets/images/home/author-3-1.webp" alt="Administrator" style="width:40px; height:40px; border-radius:50%; border:2.5px solid #fff; margin-left:-8px; object-fit:cover; box-shadow:var(--shadow-sm);">
                     </div>
                     <div style="font-size:0.88rem; font-weight:700; color:var(--brand-dark);">
                         Trusted by <span style="color:var(--brand-primary); font-weight:800;">300+ Educational Institutions</span> &amp; Principals
@@ -359,7 +359,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <div style="position:relative;">
                 <div style="border-radius:var(--radius-xl); overflow:hidden; box-shadow:var(--shadow-xl); border:6px solid #ffffff;">
-                    <img src="<?= BASE_URL ?>/assets/images/home/1500-x-1500-pixel-Corporate-Gifting-1.webp" alt="Corporate Gifts" style="width:100%; height:auto; display:block;">
+                    <img src="<?= BASE_URL ?>/assets/images/portfolio/1500-x-1500-pixel-Corporate-Gifting.webp" alt="Corporate Gifts" style="width:100%; height:auto; display:block;">
                 </div>
             </div>
         </div>

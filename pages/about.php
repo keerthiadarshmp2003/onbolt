@@ -50,7 +50,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <div>
-                <img src="<?= BASE_URL ?>/assets/images/home/330-x-711-pixel-Personal-Gifting-copy.webp" alt="OnBolt Garments" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%; max-height:550px; object-fit:cover;">
+                <img src="<?= BASE_URL ?>/assets/images/portfolio/330-x-711-pixel-Personal-Gifting-copy.webp" alt="OnBolt Garments" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%; max-height:550px; object-fit:cover;">
             </div>
         </div>
     </div>

@@ -44,7 +44,7 @@ require_once dirname(__DIR__) . '/includes/header.php';
             </div>
 
             <div>
-                <img src="<?= BASE_URL ?>/assets/images/home/307-x-398-pixel-Corporate-Gifting.webp" alt="Corporate Gifting" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%;">
+                <img src="<?= BASE_URL ?>/assets/images/portfolio/307-x-398-pixel-Corporate-Gifting.webp" alt="Corporate Gifting" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%;">
             </div>
         </div>
     </div>

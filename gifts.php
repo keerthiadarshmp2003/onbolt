@@ -29,7 +29,7 @@ require_once __DIR__ . '/includes/header.php';
     <div class="container">
         <div style="display:grid; grid-template-columns: 1fr 1fr; gap:4rem; align-items:center;">
             <div>
-                <img src="<?= BASE_URL ?>/assets/images/home/630px-x-420px-Corporate-Gifting-1.webp" alt="Customised Hampers" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%;">
+                <img src="<?= BASE_URL ?>/assets/images/portfolio/630px-x-420px-Corporate-Gifting-1.webp" alt="Customised Hampers" style="border-radius:var(--radius-xl); box-shadow:var(--shadow-xl); width:100%;">
             </div>
 
             <div>

@@ -25,7 +25,7 @@ $schools = [
         'location' => 'Trivandrum',
         'city' => 'Trivandrum',
         'description' => 'Global Public School - CBSE Wing official uniform portal. Certified daily uniforms, academic wear, and sports house kits.',
-        'logo' => 'assets/images/schools/global-public-school/CBSE/GPS Brookes Grey Polo Uniform.png',
+        'logo' => 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png',
         'classes' => 'Primary (Grade 1-5), Middle School (Grade 6-8), Secondary (Grade 9-10), Senior Secondary (Grade 11-12)'
     ],
     18 => [
@@ -194,7 +194,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/GPS Brookes Grey Polo Uniform.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/GPS Brookes Grey Polo Uniform.png',
             'desc' => 'Official GPS CBSE academic polo uniform with breathable micro-knit cotton.',
             'is_mandatory' => 1
         ],
@@ -254,7 +254,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/White Uniform Shirt.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/White Uniform Shirt.png',
             'desc' => 'Crisp institutional white uniform shirt made of durable easy-care poly-cotton.',
             'is_mandatory' => 0
         ],
@@ -264,7 +264,7 @@ $catalog = [
             'price' => 200.00,
             'custom_price' => 180.00,
             'sizes' => 'Regular, Adjustable',
-            'image' => 'assets/images/schools/global-public-school/CBSE/GPS Sports Uniform Cap.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/GPS Sports Uniform Cap.png',
             'desc' => 'Official protective sun visor cap for sports and physical education.',
             'is_mandatory' => 0
         ],
@@ -274,7 +274,7 @@ $catalog = [
             'price' => 180.00,
             'custom_price' => 160.00,
             'sizes' => 'Small (24-28), Medium (30-34), Large (36-40)',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Belt/GPS Uniform Belt with Gunmetal Buckle.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Belt/GPS Uniform Belt with Gunmetal Buckle.png',
             'desc' => 'High-strength braided nylon belt with gunmetal quick-lock buckle.',
             'is_mandatory' => 1
         ],
@@ -284,7 +284,7 @@ $catalog = [
             'price' => 160.00,
             'custom_price' => 140.00,
             'sizes' => '2, 3, 4, 5, 6, 7',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Socks/Charcoal Ribbed Crew Socks Pair.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Socks/Charcoal Ribbed Crew Socks Pair.png',
             'desc' => 'Soft elasticated ribbed crew socks designed for all-day campus comfort.',
             'is_mandatory' => 1
         ],
@@ -294,7 +294,7 @@ $catalog = [
             'price' => 400.00,
             'custom_price' => 350.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Sports/Black Shorts on Light Wood.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Black Shorts on Light Wood.png',
             'desc' => 'Lightweight athletic black shorts with drawstring waistband.',
             'is_mandatory' => 1
         ],
@@ -304,7 +304,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Sports/Blue V-Neck T-Shirt with “onbolt” Label.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Blue V-Neck T-Shirt with “onbolt” Label.png',
             'desc' => 'Blue House sports jersey featuring breathable active-dry fabric.',
             'is_mandatory' => 0
         ],
@@ -314,7 +314,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Sports/Bright Green Onbolt GPS T-Shirt.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Bright Green Onbolt GPS T-Shirt.png',
             'desc' => 'Green House sports jersey featuring breathable active-dry fabric.',
             'is_mandatory' => 0
         ],
@@ -324,7 +324,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Sports/Red V-Neck T-Shirt Mockup.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Red V-Neck T-Shirt Mockup.png',
             'desc' => 'Red House sports jersey featuring breathable active-dry fabric.',
             'is_mandatory' => 0
         ],
@@ -334,7 +334,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/CBSE/Sports/Yellow V-Neck T-Shirt Product Mockup.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Yellow V-Neck T-Shirt Product Mockup.png',
             'desc' => 'Yellow House sports jersey featuring breathable active-dry fabric.',
             'is_mandatory' => 0
         ]
@@ -368,7 +368,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/White Uniform Shirt.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/White Uniform Shirt.png',
             'desc' => 'Premium formal white uniform shirt with precision tailored stitching.',
             'is_mandatory' => 0
         ],
@@ -378,7 +378,7 @@ $catalog = [
             'price' => 650.00,
             'custom_price' => 580.00,
             'sizes' => '24, 26, 28, 30, 32, 34, 36, 38, 40, 42',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Trousers Boys.png',
+            'image' => 'assets/images/schools/global-public-school/CBSE/Trousers Boys.png',
             'desc' => 'Tailored charcoal formal trousers with comfort waistband for boys.',
             'is_mandatory' => 1
         ],
@@ -388,7 +388,7 @@ $catalog = [
             'price' => 650.00,
             'custom_price' => 580.00,
             'sizes' => '24, 26, 28, 30, 32, 34, 36, 38, 40, 42',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/trousers girls.png',
+            'image' => 'assets/images/schools/global-public-school/CBSE/trousers girls.png',
             'desc' => 'Tailored charcoal formal trousers with comfort waistband for girls.',
             'is_mandatory' => 0
         ],
@@ -398,7 +398,7 @@ $catalog = [
             'price' => 200.00,
             'custom_price' => 180.00,
             'sizes' => 'Regular, Adjustable',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/GPS Sports Uniform Cap.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/GPS Sports Uniform Cap.png',
             'desc' => 'Official protective sun visor cap for sports and outdoor athletics.',
             'is_mandatory' => 0
         ],
@@ -408,7 +408,7 @@ $catalog = [
             'price' => 180.00,
             'custom_price' => 160.00,
             'sizes' => 'Small (24-28), Medium (30-34), Large (36-40)',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Belt/GPS Uniform Belt with Gunmetal Buckle.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Belt/GPS Uniform Belt with Gunmetal Buckle.png',
             'desc' => 'Official heavy-duty uniform belt with laser-engraved gunmetal clasp.',
             'is_mandatory' => 1
         ],
@@ -418,7 +418,7 @@ $catalog = [
             'price' => 160.00,
             'custom_price' => 140.00,
             'sizes' => '2, 3, 4, 5, 6, 7',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Socks/Charcoal Ribbed Crew Socks Pair.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Socks/Charcoal Ribbed Crew Socks Pair.png',
             'desc' => 'Comfortable ribbed crew socks tailored for daily academic wear.',
             'is_mandatory' => 1
         ],
@@ -428,7 +428,7 @@ $catalog = [
             'price' => 400.00,
             'custom_price' => 350.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Sports/Black Shorts on Light Wood.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Black Shorts on Light Wood.png',
             'desc' => 'Lightweight performance sports shorts with athletic fit.',
             'is_mandatory' => 1
         ],
@@ -438,7 +438,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Sports/Blue V-Neck T-Shirt with “onbolt” Label.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Blue V-Neck T-Shirt with “onbolt” Label.png',
             'desc' => 'Official Blue House jersey tailored for high-movement athletics.',
             'is_mandatory' => 0
         ],
@@ -448,7 +448,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Sports/Bright Green Onbolt GPS T-Shirt.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Bright Green Onbolt GPS T-Shirt.png',
             'desc' => 'Official Green House jersey tailored for high-movement athletics.',
             'is_mandatory' => 0
         ],
@@ -458,7 +458,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Sports/Red V-Neck T-Shirt Mockup.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Red V-Neck T-Shirt Mockup.png',
             'desc' => 'Official Red House jersey tailored for high-movement athletics.',
             'is_mandatory' => 0
         ],
@@ -468,7 +468,7 @@ $catalog = [
             'price' => 450.00,
             'custom_price' => 399.00,
             'sizes' => '20, 22, 24, 26, 28, 30, 32, 34, 36, 38, 40',
-            'image' => 'assets/images/schools/global-public-school/INTERNATIONAL/Sports/Yellow V-Neck T-Shirt Product Mockup.png',
+            'image' => 'assets/images/schools/global-public-school/BROOKES/Sports/Yellow V-Neck T-Shirt Product Mockup.png',
             'desc' => 'Official Yellow House jersey tailored for high-movement athletics.',
             'is_mandatory' => 0
         ]
