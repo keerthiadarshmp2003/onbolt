@@ -1307,7 +1307,25 @@ require_once __DIR__ . '/../includes/header.php';
                         &larr; Back
                     </button>
                     <div>
-                        <h2 class="group-title" style="margin: 0;">Academic Uniforms</h2>
+                        <div style="display: flex; align-items: center; gap: 0.85rem; flex-wrap: wrap;">
+                            <h2 class="group-title" style="margin: 0;">Academic Uniforms</h2>
+                            
+                            <!-- Gender Filter Checkbox Buttons (ALL / BOY / GIRL) -->
+                            <div class="academic-gender-filters" style="display: inline-flex; align-items: center; gap: 4px; background: #F1F5F9; padding: 3px 6px; border-radius: 9999px; border: 1.5px solid #E2E8F0;">
+                                <label class="gender-filter-opt active" id="gender-btn-all" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); background: #ffffff; color: #FF6702; border: 1.5px solid #FF6702; box-shadow: 0 2px 6px rgba(255, 103, 2, 0.16);">
+                                    <input type="checkbox" id="chk-gender-all" checked onchange="handleGenderFilter('all')" style="cursor: pointer; accent-color: #FF6702; width: 14px; height: 14px; margin: 0;">
+                                    <span>ALL</span>
+                                </label>
+                                <label class="gender-filter-opt" id="gender-btn-boy" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); background: transparent; color: #4B5563; border: 1.5px solid transparent;">
+                                    <input type="checkbox" id="chk-gender-boy" onchange="handleGenderFilter('boy')" style="cursor: pointer; accent-color: #FF6702; width: 14px; height: 14px; margin: 0;">
+                                    <span>BOY</span>
+                                </label>
+                                <label class="gender-filter-opt" id="gender-btn-girl" style="cursor: pointer; display: inline-flex; align-items: center; gap: 6px; padding: 4px 12px; border-radius: 9999px; font-size: 0.8rem; font-weight: 800; letter-spacing: 0.04em; user-select: none; transition: all 0.2s cubic-bezier(0.4, 0, 0.2, 1); background: transparent; color: #4B5563; border: 1.5px solid transparent;">
+                                    <input type="checkbox" id="chk-gender-girl" onchange="handleGenderFilter('girl')" style="cursor: pointer; accent-color: #FF6702; width: 14px; height: 14px; margin: 0;">
+                                    <span>GIRL</span>
+                                </label>
+                            </div>
+                        </div>
                         <p class="group-desc" style="margin: 0.2rem 0 0;">Daily school shirts, trousers, shorts &amp; pinafores approved for <?= sanitize($school['name']) ?>.</p>
                     </div>
                 </div>
@@ -2189,17 +2207,107 @@ require_once __DIR__ . '/../includes/header.php';
         }
     }
 
-    // Filter Products by Gender (All products visible)
-    function setGenderFilter(gender) {
-        state.selectedGender = gender;
-        document.querySelectorAll('.gender-btn').forEach(b => b.classList.remove('active'));
-        const activeBtn = document.getElementById('gender-btn-' + gender);
-        if (activeBtn) activeBtn.classList.add('active');
+    // Gender Filter Checkbox Button Handler (ALL / BOY / GIRL)
+    function handleGenderFilter(targetGender) {
+        const chkAll = document.getElementById('chk-gender-all');
+        const chkBoy = document.getElementById('chk-gender-boy');
+        const chkGirl = document.getElementById('chk-gender-girl');
 
-        // All product cards remain visible in catalogue
-        document.querySelectorAll('.product-order-card').forEach(card => {
-            card.style.display = 'flex';
+        let activeGender = 'all';
+
+        if (targetGender === 'all') {
+            if (!chkAll || chkAll.checked) {
+                if (chkAll) chkAll.checked = true;
+            } else {
+                chkAll.checked = true;
+            }
+            if (chkBoy) chkBoy.checked = false;
+            if (chkGirl) chkGirl.checked = false;
+            activeGender = 'all';
+        } else if (targetGender === 'boy') {
+            if (chkBoy && chkBoy.checked) {
+                if (chkAll) chkAll.checked = false;
+                if (chkGirl) chkGirl.checked = false;
+                activeGender = 'boy';
+            } else {
+                // Unchecked BOY -> fallback to ALL
+                if (chkAll) chkAll.checked = true;
+                if (chkGirl) chkGirl.checked = false;
+                activeGender = 'all';
+            }
+        } else if (targetGender === 'girl') {
+            if (chkGirl && chkGirl.checked) {
+                if (chkAll) chkAll.checked = false;
+                if (chkBoy) chkBoy.checked = false;
+                activeGender = 'girl';
+            } else {
+                // Unchecked GIRL -> fallback to ALL
+                if (chkAll) chkAll.checked = true;
+                if (chkBoy) chkBoy.checked = false;
+                activeGender = 'all';
+            }
+        }
+
+        // Update button visual styles
+        ['all', 'boy', 'girl'].forEach(key => {
+            const btn = document.getElementById('gender-btn-' + key);
+            const chk = document.getElementById('chk-gender-' + key);
+            if (!btn || !chk) return;
+
+            if (chk.checked) {
+                btn.classList.add('active');
+                btn.style.background = '#ffffff';
+                btn.style.color = '#FF6702';
+                btn.style.borderColor = '#FF6702';
+                btn.style.boxShadow = '0 2px 6px rgba(255, 103, 2, 0.16)';
+            } else {
+                btn.classList.remove('active');
+                btn.style.background = 'transparent';
+                btn.style.color = '#4B5563';
+                btn.style.borderColor = 'transparent';
+                btn.style.boxShadow = 'none';
+            }
         });
+
+        if (typeof state !== 'undefined') {
+            state.selectedGender = activeGender;
+        }
+
+        filterProductsByGender(activeGender);
+    }
+
+    // Filter Products by Gender (Hides incompatible cards)
+    function filterProductsByGender(gender) {
+        const cards = document.querySelectorAll('.product-order-card');
+        cards.forEach(card => {
+            const cardGender = (card.dataset.gender || 'all').toLowerCase();
+            const prodName = (card.dataset.productName || '').toLowerCase();
+
+            if (gender === 'all') {
+                card.style.display = 'flex';
+            } else if (gender === 'boy') {
+                // Boy filter: keep unisex and boy items; hide girl items
+                const isGirlItem = cardGender === 'girl' || prodName.includes('girl') || prodName.includes('pinafore') || prodName.includes('skirt');
+                if (isGirlItem) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'flex';
+                }
+            } else if (gender === 'girl') {
+                // Girl filter: keep unisex and girl items; hide boy items
+                const isBoyItem = cardGender === 'boy' || prodName.includes('trousers (boys') || prodName.includes('trousers (boy') || (prodName.includes('shorts') && !prodName.includes('sports') && cardGender !== 'all');
+                if (isBoyItem) {
+                    card.style.display = 'none';
+                } else {
+                    card.style.display = 'flex';
+                }
+            }
+        });
+    }
+
+    // Backward-compatible setGenderFilter wrapper
+    function setGenderFilter(gender) {
+        handleGenderFilter(gender);
     }
 
     // Interactive gender selection in Step 3 Details
