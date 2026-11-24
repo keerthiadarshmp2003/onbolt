@@ -25,6 +25,9 @@ function getDbConnection(): PDO {
         if (getenv('MYSQL_ATTR_SSL_CA')) {
             $options[PDO::MYSQL_ATTR_SSL_CA] = getenv('MYSQL_ATTR_SSL_CA');
         }
+        if (getenv('DB_SSL') === 'true' || getenv('DB_SSL') === '1' || strpos(DB_HOST, 'aivencloud.com') !== false) {
+            $options[PDO::MYSQL_ATTR_SSL_VERIFY_SERVER_CERT] = false;
+        }
         try {
             $pdo = new PDO($dsn, DB_USER, DB_PASS, $options);
         } catch (PDOException $e) {
