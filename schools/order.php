@@ -502,22 +502,34 @@ require_once __DIR__ . '/../includes/header.php';
   }
 
   .size-chart-trigger-btn {
-    background: transparent;
-    border: 1px solid var(--wizard-border);
+    background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%);
+    border: 1.5px solid #FF8A3D;
     border-radius: var(--radius-pill);
-    padding: 0.2rem 0.65rem;
-    font-size: 0.75rem;
-    font-weight: 700;
-    color: var(--wizard-muted);
+    padding: 0.28rem 0.75rem;
+    font-size: 0.76rem;
+    font-weight: 800;
+    color: #EA580C;
     cursor: pointer;
-    transition: all 0.2s ease;
+    transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
     white-space: nowrap;
+    display: inline-flex;
+    align-items: center;
+    gap: 5px;
+    box-shadow: 0 2px 6px rgba(255, 103, 2, 0.14);
   }
 
   .size-chart-trigger-btn:hover {
-    border-color: var(--wizard-accent);
-    color: var(--wizard-accent);
-    background: rgba(255, 103, 2, 0.05);
+    border-color: #FF6702;
+    color: #FFFFFF;
+    background: #FF6702;
+    transform: translateY(-1px);
+    box-shadow: 0 4px 12px rgba(255, 103, 2, 0.3);
+  }
+
+  @media (max-width: 860px) {
+    .size-chart-modal-grid {
+      grid-template-columns: 1fr !important;
+    }
   }
 
   .product-select-toggle-btn {
@@ -1207,8 +1219,9 @@ require_once __DIR__ . '/../includes/header.php';
                     <h1 class="display-2" style="font-size: 2.2rem; margin-bottom: 0.5rem;">Choose your products</h1>
                     <p style="color: var(--wizard-muted); font-size: 1.05rem;">Select approved uniform garments, choose sizes, and specify quantities.</p>
                 </div>
-                <button type="button" class="btn btn-outline btn-sm open-size-chart-btn" style="border-radius: var(--radius-pill);">
-                    <span>📐 Full Sizing Chart</span>
+                <button type="button" class="btn btn-outline btn-sm open-size-chart-btn" style="border-radius: var(--radius-pill); border: 1.5px solid #FF8A3D; background: linear-gradient(135deg, #FFF7ED 0%, #FFEDD5 100%); color: #EA580C; font-weight: 800; box-shadow: 0 2px 8px rgba(255,103,2,0.12); display: inline-flex; align-items: center; gap: 6px;">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M2 12h20M7 12v-3M12 12v-5M17 12v-3"/><rect x="2" y="7" width="20" height="10" rx="2"/></svg>
+                    <span>Full Sizing Chart</span>
                 </button>
             </div>
 
@@ -1238,8 +1251,9 @@ require_once __DIR__ . '/../includes/header.php';
                                     <span style="color:#D946EF; font-weight:800; margin-left:0.25rem;">(Girl)</span>
                                 <?php endif; ?>
                             </span>
-                            <button type="button" class="size-chart-trigger-btn open-size-chart-btn" data-category="<?= sanitize($prod['category_name']) ?>" title="Inspect size diagram">
-                                Size Guide
+                            <button type="button" class="size-chart-trigger-btn open-size-chart-btn" data-category="<?= sanitize($prod['category_name']) ?>" title="Inspect size diagram & body measurements">
+                                <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M2 12h20M7 12v-3M12 12v-5M17 12v-3"/><rect x="2" y="7" width="20" height="10" rx="2"/></svg>
+                                <span>Size Guide</span>
                             </button>
                         </div>
 
@@ -1662,7 +1676,7 @@ require_once __DIR__ . '/../includes/header.php';
 
 <!-- ==================== SIZING GUIDE MODAL ==================== -->
 <div class="modal-backdrop" id="portal-size-chart-modal">
-    <div class="modal-box" style="max-width: 680px;">
+    <div class="modal-box" style="max-width: 1040px; width: 95%; max-height: 90vh; overflow-y: auto; padding: 1.75rem;">
         <button type="button" class="modal-close-btn" onclick="closeSizeChartModal()" aria-label="Close Modal">&times;</button>
         <div style="display:flex; align-items:center; gap:0.75rem; margin-bottom:1.25rem;">
             <span style="font-size:2rem;">📐</span>
@@ -1672,32 +1686,52 @@ require_once __DIR__ . '/../includes/header.php';
             </div>
         </div>
 
-        <h4 style="font-size: 0.9rem; font-weight: 800; color: var(--wizard-accent); text-transform: uppercase; margin-bottom: 0.5rem;">Garment &amp; Body Measurements (Chest, Waist, Height, Age)</h4>
-        <div style="overflow-x:auto; margin-bottom:1.5rem;">
-            <table style="width:100%; border-collapse:collapse; font-size:0.86rem; text-align:left;">
-                <thead>
-                    <tr style="background:#F1F5F9; border-bottom:2px solid var(--wizard-border); color:var(--wizard-dark); font-weight:800;">
-                        <th style="padding:0.6rem 0.8rem;">Size</th>
-                        <th style="padding:0.6rem 0.8rem;">Age / Grade</th>
-                        <th style="padding:0.6rem 0.8rem;">Height (cm)</th>
-                        <th style="padding:0.6rem 0.8rem;">Chest (in)</th>
-                        <th style="padding:0.6rem 0.8rem;">Waist (in)</th>
-                        <th style="padding:0.6rem 0.8rem;">Length (in)</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">18–20</td><td style="padding:0.5rem 0.8rem;">Pre-KG to LKG (Ages 3–4)</td><td style="padding:0.5rem 0.8rem;">95–105 cm</td><td style="padding:0.5rem 0.8rem;">20"–22"</td><td style="padding:0.5rem 0.8rem;">18"–20"</td><td style="padding:0.5rem 0.8rem;">15"</td></tr>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">22–24</td><td style="padding:0.5rem 0.8rem;">UKG to Class 1 (Ages 5–6)</td><td style="padding:0.5rem 0.8rem;">106–118 cm</td><td style="padding:0.5rem 0.8rem;">24"–26"</td><td style="padding:0.5rem 0.8rem;">21"–22"</td><td style="padding:0.5rem 0.8rem;">17"</td></tr>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">26–28</td><td style="padding:0.5rem 0.8rem;">Class 2–3 (Ages 7–8)</td><td style="padding:0.5rem 0.8rem;">119–130 cm</td><td style="padding:0.5rem 0.8rem;">28"–30"</td><td style="padding:0.5rem 0.8rem;">23"–24"</td><td style="padding:0.5rem 0.8rem;">19"</td></tr>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">30–32</td><td style="padding:0.5rem 0.8rem;">Class 4–5 (Ages 9–10)</td><td style="padding:0.5rem 0.8rem;">131–142 cm</td><td style="padding:0.5rem 0.8rem;">32"–34"</td><td style="padding:0.5rem 0.8rem;">25"–26"</td><td style="padding:0.5rem 0.8rem;">21"</td></tr>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">34–36</td><td style="padding:0.5rem 0.8rem;">Class 6–7 (Ages 11–12)</td><td style="padding:0.5rem 0.8rem;">143–155 cm</td><td style="padding:0.5rem 0.8rem;">36"–38"</td><td style="padding:0.5rem 0.8rem;">27"–28"</td><td style="padding:0.5rem 0.8rem;">24"</td></tr>
-                    <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">38–40 / S–M</td><td style="padding:0.5rem 0.8rem;">Class 8–9 (Ages 13–14)</td><td style="padding:0.5rem 0.8rem;">156–168 cm</td><td style="padding:0.5rem 0.8rem;">38"–40"</td><td style="padding:0.5rem 0.8rem;">29"–31"</td><td style="padding:0.5rem 0.8rem;">26"</td></tr>
-                    <tr><td style="padding:0.5rem 0.8rem; font-weight:800; color:var(--wizard-accent);">42–46 / L–XXL</td><td style="padding:0.5rem 0.8rem;">Class 10–12 &amp; Senior</td><td style="padding:0.5rem 0.8rem;">169–185 cm</td><td style="padding:0.5rem 0.8rem;">42"–46"</td><td style="padding:0.5rem 0.8rem;">32"–36"</td><td style="padding:0.5rem 0.8rem;">28"–30"</td></tr>
-                </tbody>
-            </table>
+        <!-- 2-Column Grid: Table on Left, Character Size Display Image on Right -->
+        <div class="size-chart-modal-grid" style="display:grid; grid-template-columns: 1fr 360px; gap: 1.5rem; align-items: start; margin-bottom: 1.5rem;">
+            
+            <!-- LEFT: Sizing Table -->
+            <div style="min-width: 0;">
+                <h4 style="font-size: 0.88rem; font-weight: 800; color: var(--wizard-accent); text-transform: uppercase; margin-bottom: 0.6rem; letter-spacing: 0.03em;">
+                    Garment &amp; Body Measurements (Chest, Waist, Height, Age)
+                </h4>
+                <div style="overflow-x:auto; border: 1.5px solid var(--wizard-border); border-radius: var(--radius-lg); background: #ffffff;">
+                    <table style="width:100%; border-collapse:collapse; font-size:0.84rem; text-align:left;">
+                        <thead>
+                            <tr style="background:#F1F5F9; border-bottom:2px solid var(--wizard-border); color:var(--wizard-dark); font-weight:800;">
+                                <th style="padding:0.65rem 0.75rem;">Size</th>
+                                <th style="padding:0.65rem 0.75rem;">Age / Grade</th>
+                                <th style="padding:0.65rem 0.75rem;">Height (cm)</th>
+                                <th style="padding:0.65rem 0.75rem;">Chest (in)</th>
+                                <th style="padding:0.65rem 0.75rem;">Waist (in)</th>
+                                <th style="padding:0.65rem 0.75rem;">Length (in)</th>
+                            </tr>
+                        </thead>
+                        <tbody>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">18–20</td><td style="padding:0.5rem 0.75rem;">Pre-KG to LKG (Ages 3–4)</td><td style="padding:0.5rem 0.75rem;">95–105 cm</td><td style="padding:0.5rem 0.75rem;">20"–22"</td><td style="padding:0.5rem 0.75rem;">18"–20"</td><td style="padding:0.5rem 0.75rem;">15"</td></tr>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">22–24</td><td style="padding:0.5rem 0.75rem;">UKG to Class 1 (Ages 5–6)</td><td style="padding:0.5rem 0.75rem;">106–118 cm</td><td style="padding:0.5rem 0.75rem;">24"–26"</td><td style="padding:0.5rem 0.75rem;">21"–22"</td><td style="padding:0.5rem 0.75rem;">17"</td></tr>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">26–28</td><td style="padding:0.5rem 0.75rem;">Class 2–3 (Ages 7–8)</td><td style="padding:0.5rem 0.75rem;">119–130 cm</td><td style="padding:0.5rem 0.75rem;">28"–30"</td><td style="padding:0.5rem 0.75rem;">23"–24"</td><td style="padding:0.5rem 0.75rem;">19"</td></tr>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">30–32</td><td style="padding:0.5rem 0.75rem;">Class 4–5 (Ages 9–10)</td><td style="padding:0.5rem 0.75rem;">131–142 cm</td><td style="padding:0.5rem 0.75rem;">32"–34"</td><td style="padding:0.5rem 0.75rem;">25"–26"</td><td style="padding:0.5rem 0.75rem;">21"</td></tr>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">34–36</td><td style="padding:0.5rem 0.75rem;">Class 6–7 (Ages 11–12)</td><td style="padding:0.5rem 0.75rem;">143–155 cm</td><td style="padding:0.5rem 0.75rem;">36"–38"</td><td style="padding:0.5rem 0.75rem;">27"–28"</td><td style="padding:0.5rem 0.75rem;">24"</td></tr>
+                            <tr style="border-bottom:1px solid var(--wizard-border);"><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">38–40 / S–M</td><td style="padding:0.5rem 0.75rem;">Class 8–9 (Ages 13–14)</td><td style="padding:0.5rem 0.75rem;">156–168 cm</td><td style="padding:0.5rem 0.75rem;">38"–40"</td><td style="padding:0.5rem 0.75rem;">29"–31"</td><td style="padding:0.5rem 0.75rem;">26"</td></tr>
+                            <tr><td style="padding:0.5rem 0.75rem; font-weight:800; color:var(--wizard-accent);">42–46 / L–XXL</td><td style="padding:0.5rem 0.75rem;">Class 10–12 &amp; Senior</td><td style="padding:0.5rem 0.75rem;">169–185 cm</td><td style="padding:0.5rem 0.75rem;">42"–46"</td><td style="padding:0.5rem 0.75rem;">32"–36"</td><td style="padding:0.5rem 0.75rem;">28"–30"</td></tr>
+                        </tbody>
+                    </table>
+                </div>
+                <div style="margin-top: 0.75rem; display: flex; align-items: center; gap: 8px; font-size: 0.82rem; color: var(--wizard-muted);">
+                    <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="12" cy="12" r="10"></circle><line x1="12" y1="16" x2="12" y2="12"></line><line x1="12" y1="8" x2="12.01" y2="8"></line></svg>
+                    <span>Need sizing assistance? Call OnBolt School Helpdesk: <strong style="color:var(--wizard-dark);">+91 88486 70739</strong></span>
+                </div>
+            </div>
+
+            <!-- RIGHT: Character With Size Display Image -->
+            <div style="display:flex; flex-direction:column; align-items:center;">
+                <div style="width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); background: #F8FAFC; border: 1.5px solid #E2E8F0;">
+                    <img src="<?= BASE_URL ?>/assets/images/uniform-character-size-guide.svg" alt="Student Uniform Body Measurement Character Guide" style="width: 100%; height: auto; display: block;" loading="eager">
+                </div>
+            </div>
         </div>
 
-        <button type="button" class="btn btn-primary btn-sm" style="width: 100%;" onclick="closeSizeChartModal()">Got It, Close Guide</button>
+        <button type="button" class="btn btn-primary btn-sm" style="width: 100%; padding: 0.8rem; font-weight: 800;" onclick="closeSizeChartModal()">Got It, Close Guide</button>
     </div>
 </div>
 
