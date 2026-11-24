@@ -75,7 +75,7 @@ $cartSummary = $activeSchoolId ? getCartTotals((int)$activeSchoolId) : ['count' 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
     
     <!-- Main Interactive Script -->
-    <script src="<?= BASE_URL ?>/assets/js/main.js?v=3.3" defer></script>
+    <script src="<?= BASE_URL ?>/assets/js/main.js?v=<?= filemtime(__DIR__ . '/../assets/js/main.js') ?>" defer></script>
 </head>
 <body>
 

@@ -195,19 +195,35 @@ require_once __DIR__ . '/../includes/header.php';
     }
 }
 
+@media (max-width: 768px) {
+    .schools-page-hero {
+        padding: 40px 0;
+    }
+    .schools-section {
+        padding: 30px 0 60px !important;
+    }
+}
+
 @media (max-width: 640px) {
     .schools-exact-grid {
         grid-template-columns: 1fr;
+        gap: 16px;
     }
     .schools-page-hero-title {
-        font-size: 34px;
+        font-size: clamp(28px, 8vw, 36px);
     }
     .schools-sec-heading h2 {
-        font-size: 30px;
+        font-size: clamp(22px, 6vw, 28px) !important;
     }
     .schools-exact-card {
-        padding: 30px 20px;
+        padding: 24px 18px;
         min-height: auto;
+    }
+    .ajax-newsletter-form {
+        flex-direction: column !important;
+    }
+    .ajax-newsletter-form button {
+        width: 100% !important;
     }
 }
 </style>

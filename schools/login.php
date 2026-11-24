@@ -239,12 +239,24 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         }
 
         @media (max-width: 480px) {
+            body {
+                padding: 16px;
+            }
             .login-card {
-                padding: 32px 24px;
+                padding: 28px 20px;
                 border-radius: 16px;
+                width: 100%;
             }
             .login-title {
-                font-size: 22px;
+                font-size: 20px;
+            }
+            .form-control {
+                font-size: 16px !important;
+                height: 48px;
+            }
+            .btn-login {
+                height: 48px;
+                font-size: 15px;
             }
         }
     </style>

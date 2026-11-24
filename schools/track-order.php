@@ -181,6 +181,13 @@ require_once __DIR__ . '/../includes/header.php';
     margin-top: 3px;
 }
 
+.track-info-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 20px;
+    margin-bottom: 30px;
+}
+
 @media (max-width: 768px) {
     .track-stepper-wrap {
         grid-template-columns: 1fr;
@@ -200,6 +207,15 @@ require_once __DIR__ . '/../includes/header.php';
     }
     .track-form-grid {
         grid-template-columns: 1fr !important;
+    }
+    .track-info-grid {
+        grid-template-columns: 1fr !important;
+        gap: 14px !important;
+    }
+    #invoiceModal > div,
+    #exchangeModal > div {
+        max-width: calc(100vw - 24px) !important;
+        margin: 12px auto !important;
     }
 }
 </style>
@@ -400,7 +416,7 @@ require_once __DIR__ . '/../includes/header.php';
         </div>
 
         <!-- Student & Parent Delivery Info -->
-        <div style="display:grid; grid-template-columns:1fr 1fr; gap:20px; margin-bottom:30px;">
+        <div class="track-info-grid">
             <div style="background:#ffffff; border-radius:16px; border:1.5px solid #E2E8F0; padding:22px 26px;">
                 <h4 style="font-size:13px; text-transform:uppercase; font-weight:800; color:#94A3B8; margin:0 0 12px; letter-spacing:0.05em;">Student Identification</h4>
                 <div style="font-size:16px; font-weight:800; color:#1E293B; margin-bottom:4px;"><?= sanitize($order['student_name']) ?></div>
@@ -425,7 +441,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <span style="font-size:13px; font-weight:700; color:#64748B;"><?= count($items) ?> Items</span>
             </div>
 
-            <table style="width:100%; border-collapse:collapse;">
+            <div style="overflow-x:auto; -webkit-overflow-scrolling:touch;">
+            <table style="width:100%; border-collapse:collapse; min-width:480px;">
                 <thead>
                     <tr style="border-bottom:1.5px solid #E2E8F0; font-size:12px; text-transform:uppercase; color:#64748B; text-align:left;">
                         <th style="padding:10px 8px;">Garment Item</th>
@@ -471,6 +488,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <?php endforeach; ?>
                 </tbody>
             </table>
+            </div>
 
             <div style="display:flex; justify-content:space-between; align-items:center; margin-top:20px; padding-top:16px; border-top:1.5px solid #E2E8F0;">
                 <span style="font-size:14px; color:#64748B; font-weight:600;">Standard Free School Distribution</span>

@@ -232,6 +232,30 @@ require_once __DIR__ . '/../includes/header.php';
     margin-top: 2rem;
 }
 
+@media (max-width: 640px) {
+    .receipt-card {
+        padding: 1.25rem 1rem !important;
+        border-radius: var(--radius-lg) !important;
+    }
+    .receipt-meta-grid {
+        grid-template-columns: 1fr !important;
+        gap: 1rem !important;
+        padding: 1rem !important;
+    }
+    .receipt-actions-bar {
+        flex-direction: column !important;
+        gap: 0.75rem !important;
+    }
+    .receipt-actions-bar .btn {
+        width: 100% !important;
+        justify-content: center;
+    }
+    #invoiceModal > div {
+        max-width: calc(100vw - 24px) !important;
+        margin: 12px auto !important;
+    }
+}
+
 /* Print-Specific Styles */
 @media print {
     body * {

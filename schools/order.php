@@ -1092,6 +1092,123 @@ require_once __DIR__ . '/../includes/header.php';
     border-color: var(--wizard-accent);
     outline: none;
   }
+
+  /* ==================== ORDER WIZARD MOBILE OPTIMIZATIONS (320px - 768px) ==================== */
+  .verify-meta-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 1.5rem;
+  }
+
+  @media (max-width: 768px) {
+    .wizard-wrapper {
+      padding-top: 15px;
+      padding-bottom: 40px;
+    }
+    .portal-support-bar {
+      flex-direction: column;
+      align-items: stretch;
+      gap: 0.85rem;
+      padding: 0.85rem 1rem;
+    }
+    .portal-support-bar > div:last-child {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 0.5rem;
+      align-items: center;
+    }
+    .verify-meta-grid {
+      grid-template-columns: 1fr !important;
+      gap: 1rem !important;
+    }
+    .order-meta-header {
+      flex-direction: column;
+      align-items: flex-start;
+      gap: 0.5rem;
+    }
+    .order-meta-header div:last-child {
+      text-align: left !important;
+    }
+  }
+
+  @media (max-width: 640px) {
+    .stepper-container {
+      padding: 1rem 0.6rem;
+      margin-bottom: 1.5rem;
+      border-radius: var(--radius-lg);
+    }
+    .step-circle {
+      width: 32px;
+      height: 32px;
+      font-size: 0.8rem;
+    }
+    .stepper-track-bg {
+      top: 16px;
+    }
+    .step-label {
+      margin-top: 0.35rem;
+      font-size: 0.65rem;
+      line-height: 1.1;
+      max-width: 60px;
+      letter-spacing: 0;
+      white-space: normal;
+    }
+    .products-order-grid {
+      grid-template-columns: 1fr !important;
+      gap: 1.25rem !important;
+    }
+    .uniform-group-banner {
+      flex-direction: column;
+      align-items: stretch !important;
+      gap: 0.85rem !important;
+    }
+    .academic-gender-filters {
+      width: 100%;
+      justify-content: flex-start;
+      flex-wrap: wrap;
+    }
+    .wizard-action-bar {
+      padding: 1rem;
+      flex-direction: column-reverse;
+      gap: 0.75rem;
+      align-items: stretch;
+    }
+    .wizard-action-bar .btn,
+    .wizard-action-bar .btn-pay-now {
+      width: 100% !important;
+      justify-content: center;
+    }
+    .wizard-action-bar > div {
+      width: 100%;
+      justify-content: space-between;
+    }
+    .size-chart-modal-grid {
+      grid-template-columns: 1fr !important;
+      gap: 1rem !important;
+    }
+    .product-top-row {
+      flex-wrap: wrap;
+      gap: 0.4rem;
+    }
+    .size-btn {
+      min-width: 38px;
+      min-height: 38px;
+      font-size: 0.85rem;
+    }
+    .step-header-box h1 {
+      font-size: 1.65rem !important;
+    }
+  }
+
+  @media (max-width: 380px) {
+    .step-label {
+      display: none;
+    }
+    .step-node.active .step-label {
+      display: block;
+      font-size: 0.62rem;
+    }
+  }
 </style>
 
 <div class="wizard-wrapper">
@@ -1543,7 +1660,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
 
                 <!-- Student & Delivery Summary Cards -->
-                <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1.5rem; margin-bottom: 2rem;">
+                <div class="verify-meta-grid" style="margin-bottom: 2rem;">
                     <div style="background: #F8FAFC; border: 1px solid var(--wizard-border); border-radius: var(--radius-lg); padding: 1.25rem;">
                         <h4 style="font-size: 0.85rem; font-weight: 800; text-transform: uppercase; color: var(--wizard-accent); letter-spacing: 0.06em; margin-bottom: 0.75rem;">Student Profile</h4>
                         <div style="margin-bottom: 0.4rem;">
