@@ -1927,8 +1927,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             <!-- RIGHT: Character With Size Display Image -->
             <div style="display:flex; flex-direction:column; align-items:center;">
-                <div style="width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); background: #F8FAFC; border: 1.5px solid #E2E8F0;">
-                    <img src="<?= BASE_URL ?>/assets/images/uniform-character-size-guide.svg" alt="Student Uniform Body Measurement Character Guide" style="width: 100%; height: auto; display: block;" loading="eager">
+                <div style="width: 100%; border-radius: 16px; overflow: hidden; box-shadow: 0 4px 16px rgba(0,0,0,0.06); background: #ffffff; border: 1.5px solid #E2E8F0;">
+                    <img src="<?= BASE_URL ?>/assets/images/uniform-character-size-guide.jpg" alt="Student Uniform Body Measurement Guide" style="width: 100%; height: auto; display: block;" loading="eager">
                 </div>
             </div>
         </div>
