@@ -16,6 +16,11 @@ $activeNav = 'schools';
 $pageTitle = 'Schools – On Bolt';
 $pageDesc = 'Select your educational institution to order official school uniforms and complete academic kits from OnBolt.';
 
+// Release session lock early for high-concurrency scaling
+if (session_status() === PHP_SESSION_ACTIVE) {
+    session_write_close();
+}
+
 require_once __DIR__ . '/../includes/header.php';
 ?>
 
@@ -233,8 +238,14 @@ require_once __DIR__ . '/../includes/header.php';
         <!-- School Cards Grid (Dynamically fetched top-level institutions based on Admin hierarchy) -->
         <div class="schools-exact-grid" id="schoolsGrid">
             <?php
-            $pdo = getDbConnection();
-            $topSchools = $pdo->query("SELECT * FROM schools WHERE parent_id IS NULL AND status = 1 ORDER BY sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+            $cachedTopSchools = getFastCache('top_schools', 120);
+            if ($cachedTopSchools !== null) {
+                $topSchools = $cachedTopSchools;
+            } else {
+                $pdo = getDbConnection();
+                $topSchools = $pdo->query("SELECT * FROM schools WHERE parent_id IS NULL AND status = 1 ORDER BY sort_order ASC, id ASC")->fetchAll(PDO::FETCH_ASSOC);
+                setFastCache('top_schools', $topSchools, 120);
+            }
             foreach ($topSchools as $ts):
             ?>
                 <div class="schools-exact-card" data-slug="<?= sanitize($ts['slug']) ?>" data-keywords="<?= sanitize(strtolower($ts['name'] . ' ' . $ts['code'] . ' ' . $ts['location'])) ?>">

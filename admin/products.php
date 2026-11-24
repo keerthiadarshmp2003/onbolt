@@ -100,6 +100,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $pdo->prepare("INSERT INTO school_products (school_id, product_id, custom_price, actual_price, vendor_commission, vendor_price, is_mandatory, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE custom_price = VALUES(custom_price), actual_price = VALUES(actual_price), vendor_commission = VALUES(vendor_commission), vendor_price = VALUES(vendor_price), is_mandatory = VALUES(is_mandatory)")
                         ->execute([$schoolId, $newProdId, $price, $actualPrice, $vendorCommission, $actualPrice, $isMandatory]);
 
+                    clearFastCache();
                     $msg = "SAVED SUCCESSFULLY";
                     logActivity('create_uniform', 'products', (int)$admin['id'], 'admin', "Created uniform {$name} (#{$newProdId}) for school #{$schoolId}");
                 } elseif ($action === 'update') {
@@ -134,7 +135,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                         }
                     }
 
-                    $msg = "UPDATED SUCCESSFULLY";
+                    clearFastCache();
+                    clearFastCache();
+                $msg = "UPDATED SUCCESSFULLY";
                     logActivity('update_uniform', 'products', (int)$admin['id'], 'admin', "Updated uniform #{$id}");
                 }
             } catch (Exception $e) {
@@ -173,6 +176,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     }
                 }
 
+                clearFastCache();
                 $msg = "UPDATED SUCCESSFULLY";
                 logActivity('quick_update_pricing_sizes', 'products', (int)$admin['id'], 'admin', "Quick updated price/sizes for product #{$pId}");
             } catch (Exception $e) {

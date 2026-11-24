@@ -1,37 +1,134 @@
-# OnBolt Platform - Apache URL Rewriting Engine
-RewriteEngine On
-# RewriteBase automatically adapts to document root or subfolder (omit hardcoded /onbolt/ so it works on cloud roots)
+# ==============================================================================
+# OnBolt Enterprise Platform - High-Performance Web Server Configuration
+# Optimized for 1,000+ Concurrent Parents (LiteSpeed / Apache)
+# ==============================================================================
 
-# Exclude existing files and directories
-RewriteCond %{REQUEST_FILENAME} -f [OR]
-RewriteCond %{REQUEST_FILENAME} -d
-RewriteRule ^ - [L]
+# 1. COMPRESSION ENGINE (mod_deflate / GZIP)
+<IfModule mod_deflate.c>
+    # Compress HTML, CSS, JavaScript, Text, XML and fonts
+    AddOutputFilterByType DEFLATE application/javascript
+    AddOutputFilterByType DEFLATE application/json
+    AddOutputFilterByType DEFLATE application/rss+xml
+    AddOutputFilterByType DEFLATE application/vnd.ms-fontobject
+    AddOutputFilterByType DEFLATE application/x-font
+    AddOutputFilterByType DEFLATE application/x-font-opentype
+    AddOutputFilterByType DEFLATE application/x-font-otf
+    AddOutputFilterByType DEFLATE application/x-font-truetype
+    AddOutputFilterByType DEFLATE application/x-font-ttf
+    AddOutputFilterByType DEFLATE application/x-javascript
+    AddOutputFilterByType DEFLATE application/xhtml+xml
+    AddOutputFilterByType DEFLATE application/xml
+    AddOutputFilterByType DEFLATE font/opentype
+    AddOutputFilterByType DEFLATE font/otf
+    AddOutputFilterByType DEFLATE font/ttf
+    AddOutputFilterByType DEFLATE font/woff
+    AddOutputFilterByType DEFLATE font/woff2
+    AddOutputFilterByType DEFLATE image/svg+xml
+    AddOutputFilterByType DEFLATE image/x-icon
+    AddOutputFilterByType DEFLATE text/css
+    AddOutputFilterByType DEFLATE text/html
+    AddOutputFilterByType DEFLATE text/javascript
+    AddOutputFilterByType DEFLATE text/plain
+    AddOutputFilterByType DEFLATE text/xml
 
-# Clean Public Routes
-RewriteRule ^about/?$ pages/about.php [L,QSA]
-RewriteRule ^categories/?$ pages/categories.php [L,QSA]
-RewriteRule ^portfolio/?$ pages/portfolio.php [L,QSA]
-RewriteRule ^corporate/?$ pages/corporate.php [L,QSA]
-RewriteRule ^gifts/?$ pages/gifts.php [L,QSA]
-RewriteRule ^contact/?$ pages/contact.php [L,QSA]
-RewriteRule ^privacy/?$ pages/privacy.php [L,QSA]
-RewriteRule ^terms/?$ pages/terms.php [L,QSA]
+    # Remove browser bugs (only needed for really old browsers)
+    BrowserMatch ^Mozilla/4 gzip-only-text/html
+    BrowserMatch ^Mozilla/4\.0[678] no-gzip
+    BrowserMatch \bMSIE !no-gzip !gzip-only-text/html
+    Header append Vary User-Agent
+</IfModule>
 
-# Parent Login & Direct Ordering Portal
-RewriteRule ^login/?$ schools/login.php [L,QSA]
-RewriteRule ^portal/?$ schools/order.php [L,QSA]
-RewriteRule ^schools/payment-success/?$ schools/payment-success.php [L,QSA]
+# 2. BROWSER CACHING (mod_expires)
+<IfModule mod_expires.c>
+    ExpiresActive On
+    ExpiresDefault "access plus 1 month"
 
-# School Directory
-RewriteRule ^schools/?$ schools/index.php [L,QSA]
+    # Images & WebP
+    ExpiresByType image/webp "access plus 1 year"
+    ExpiresByType image/jpeg "access plus 1 year"
+    ExpiresByType image/png "access plus 1 year"
+    ExpiresByType image/gif "access plus 1 year"
+    ExpiresByType image/svg+xml "access plus 1 year"
+    ExpiresByType image/x-icon "access plus 1 year"
 
-# School Portal Subpaths
-RewriteRule ^schools/([^/]+)/login/?$ schools/login.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/logout/?$ schools/logout.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/dashboard/?$ schools/dashboard.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/order/?$ schools/order.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/cart/?$ schools/cart.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/checkout/?$ schools/checkout.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/orders/?$ schools/orders.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/profile/?$ schools/profile.php?school=$1 [L,QSA]
-RewriteRule ^schools/([^/]+)/?$ schools/details.php?school=$1 [L,QSA]
+    # Fonts
+    ExpiresByType font/woff2 "access plus 1 year"
+    ExpiresByType font/woff "access plus 1 year"
+    ExpiresByType font/ttf "access plus 1 year"
+    ExpiresByType application/font-woff2 "access plus 1 year"
+
+    # CSS and JavaScript
+    ExpiresByType text/css "access plus 1 month"
+    ExpiresByType application/javascript "access plus 1 month"
+    ExpiresByType text/javascript "access plus 1 month"
+
+    # Dynamic Pages
+    ExpiresByType text/html "access plus 0 seconds"
+    ExpiresByType application/json "access plus 0 seconds"
+</IfModule>
+
+# 3. CACHE HEADERS & KEEP-ALIVE (mod_headers)
+<IfModule mod_headers.c>
+    # 1 Year Immutable Cache for Static Media & Fonts
+    <FilesMatch "\.(ico|jpe?g|png|gif|webp|svg|woff|woff2|ttf|eot)$">
+        Header set Cache-Control "max-age=31536000, public, immutable"
+        Header append Vary "Accept-Encoding"
+    </FilesMatch>
+
+    # 1 Month Cache for Stylesheets & Scripts
+    <FilesMatch "\.(css|js)$">
+        Header set Cache-Control "max-age=2592000, public"
+        Header append Vary "Accept-Encoding"
+    </FilesMatch>
+
+    # Prevent clickjacking and MIME sniffing
+    Header set X-Content-Type-Options "nosniff"
+    Header set X-XSS-Protection "1; mode=block"
+
+    # Enable Keep-Alive connection persistence
+    Header set Connection "keep-alive"
+</IfModule>
+
+# 4. LITESPEED CACHE ENGINE DIRECTIVES (Hostycare / LiteSpeed)
+<IfModule Litespeed>
+    CacheLookup on
+</IfModule>
+
+# 5. URL REWRITING ENGINE
+<IfModule mod_rewrite.c>
+    RewriteEngine On
+
+    # Exclude existing physical files and directories from PHP front controllers
+    RewriteCond %{REQUEST_FILENAME} -f [OR]
+    RewriteCond %{REQUEST_FILENAME} -d
+    RewriteRule ^ - [L]
+
+    # Clean Public Routes
+    RewriteRule ^about/?$ pages/about.php [L,QSA]
+    RewriteRule ^categories/?$ pages/categories.php [L,QSA]
+    RewriteRule ^portfolio/?$ pages/portfolio.php [L,QSA]
+    RewriteRule ^corporate/?$ pages/corporate.php [L,QSA]
+    RewriteRule ^gifts/?$ pages/gifts.php [L,QSA]
+    RewriteRule ^contact/?$ pages/contact.php [L,QSA]
+    RewriteRule ^privacy/?$ pages/privacy.php [L,QSA]
+    RewriteRule ^terms/?$ pages/terms.php [L,QSA]
+
+    # Parent Login & Direct Ordering Portal
+    RewriteRule ^login/?$ schools/login.php [L,QSA]
+    RewriteRule ^portal/?$ schools/order.php [L,QSA]
+    RewriteRule ^schools/payment-success/?$ schools/payment-success.php [L,QSA]
+
+    # School Directory
+    RewriteRule ^schools/?$ schools/index.php [L,QSA]
+
+    # School Portal Subpaths
+    RewriteRule ^schools/([^/]+)/login/?$ schools/login.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/logout/?$ schools/logout.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/dashboard/?$ schools/dashboard.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/order/?$ schools/order.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/cart/?$ schools/cart.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/checkout/?$ schools/checkout.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/orders/?$ schools/orders.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/profile/?$ schools/profile.php?school=$1 [L,QSA]
+    RewriteRule ^schools/([^/]+)/?$ schools/details.php?school=$1 [L,QSA]
+</IfModule>

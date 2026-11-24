@@ -7,8 +7,76 @@ declare(strict_types=1);
 
 require_once __DIR__ . '/../config/app.php';
 
+// ==================== HIGH-PERFORMANCE FAST CACHE ENGINE ====================
+function getFastCache(string $key, int $ttl = 60): mixed {
+    static $memoryCache = [];
+    $now = time();
+    if (isset($memoryCache[$key]) && $memoryCache[$key]['expires'] > $now) {
+        return $memoryCache[$key]['data'];
+    }
+
+    if (function_exists('apcu_fetch')) {
+        $success = false;
+        $val = apcu_fetch('onbolt_' . $key, $success);
+        if ($success) {
+            $memoryCache[$key] = ['data' => $val, 'expires' => $now + $ttl];
+            return $val;
+        }
+    }
+
+    $cacheDir = sys_get_temp_dir() . '/onbolt_fast_cache';
+    $cacheFile = $cacheDir . '/' . md5($key) . '.cache';
+    if (file_exists($cacheFile)) {
+        $mtime = filemtime($cacheFile);
+        if (($now - $mtime) < $ttl) {
+            $content = @file_get_contents($cacheFile);
+            if ($content !== false) {
+                $val = @unserialize($content);
+                if ($val !== false) {
+                    $memoryCache[$key] = ['data' => $val, 'expires' => $now + $ttl];
+                    return $val;
+                }
+            }
+        }
+    }
+    return null;
+}
+
+function setFastCache(string $key, mixed $data, int $ttl = 60): void {
+    static $memoryCache = [];
+    $now = time();
+    $memoryCache[$key] = ['data' => $data, 'expires' => $now + $ttl];
+
+    if (function_exists('apcu_store')) {
+        apcu_store('onbolt_' . $key, $data, $ttl);
+    }
+
+    $cacheDir = sys_get_temp_dir() . '/onbolt_fast_cache';
+    if (!is_dir($cacheDir)) {
+        @mkdir($cacheDir, 0777, true);
+    }
+    $cacheFile = $cacheDir . '/' . md5($key) . '.cache';
+    @file_put_contents($cacheFile, serialize($data), LOCK_EX);
+}
+
+function clearFastCache(): void {
+    if (function_exists('apcu_clear_cache')) {
+        apcu_clear_cache();
+    }
+    $cacheDir = sys_get_temp_dir() . '/onbolt_fast_cache';
+    if (is_dir($cacheDir)) {
+        $files = glob($cacheDir . '/*.cache');
+        if ($files) {
+            foreach ($files as $f) {
+                @unlink($f);
+            }
+        }
+    }
+}
+
 // School functions
 function getSchoolBySlug(string $slug): ?array {
+    static $reqCache = [];
     $aliases = [
         'school-b' => 'gps-brookes',
         'global-public-school-brookes' => 'gps-brookes',
@@ -20,22 +88,57 @@ function getSchoolBySlug(string $slug): ?array {
     if (isset($aliases[$slug])) {
         $slug = $aliases[$slug];
     }
+    if (isset($reqCache[$slug])) {
+        return $reqCache[$slug];
+    }
+
+    $cacheKey = 'school_slug_' . $slug;
+    $cached = getFastCache($cacheKey, 120);
+    if ($cached !== null) {
+        $reqCache[$slug] = $cached ?: null;
+        return $reqCache[$slug];
+    }
+
     $pdo = getDbConnection();
     $stmt = $pdo->prepare("SELECT * FROM schools WHERE slug = ? AND status = 1 LIMIT 1");
     $stmt->execute([$slug]);
     $school = $stmt->fetch();
-    return $school ?: null;
+    $res = $school ?: null;
+    setFastCache($cacheKey, $res ?: false, 120);
+    $reqCache[$slug] = $res;
+    return $res;
 }
 
 function getSchoolById(int $id): ?array {
+    static $reqCache = [];
+    if (isset($reqCache[$id])) {
+        return $reqCache[$id];
+    }
+
+    $cacheKey = 'school_id_' . $id;
+    $cached = getFastCache($cacheKey, 120);
+    if ($cached !== null) {
+        $reqCache[$id] = $cached ?: null;
+        return $reqCache[$id];
+    }
+
     $pdo = getDbConnection();
     $stmt = $pdo->prepare("SELECT * FROM schools WHERE id = ? LIMIT 1");
     $stmt->execute([$id]);
     $school = $stmt->fetch();
-    return $school ?: null;
+    $res = $school ?: null;
+    setFastCache($cacheKey, $res ?: false, 120);
+    $reqCache[$id] = $res;
+    return $res;
 }
 
 function getAllSchools(bool $activeOnly = true): array {
+    $cacheKey = 'all_schools_' . ($activeOnly ? '1' : '0');
+    $cached = getFastCache($cacheKey, 120);
+    if ($cached !== null) {
+        return $cached;
+    }
+
     $pdo = getDbConnection();
     $sql = "SELECT s.*, 
             (SELECT COUNT(*) FROM school_products sp WHERE sp.school_id = s.id AND sp.status = 1) as product_count,
@@ -45,11 +148,18 @@ function getAllSchools(bool $activeOnly = true): array {
         $sql .= " WHERE s.status = 1";
     }
     $sql .= " ORDER BY s.sort_order ASC, s.name ASC";
-    return $pdo->query($sql)->fetchAll();
+    $schools = $pdo->query($sql)->fetchAll();
+    setFastCache($cacheKey, $schools, 120);
+    return $schools;
 }
 
 // Student lookup for parent
 function getStudentsForParent(int $parentId): array {
+    static $reqCache = [];
+    if (isset($reqCache[$parentId])) {
+        return $reqCache[$parentId];
+    }
+
     $pdo = getDbConnection();
     $stmt = $pdo->prepare("SELECT s.*, ps.relationship 
                            FROM students s
@@ -57,11 +167,25 @@ function getStudentsForParent(int $parentId): array {
                            WHERE ps.parent_id = ? AND s.status = 1
                            ORDER BY s.student_name ASC");
     $stmt->execute([$parentId]);
-    return $stmt->fetchAll();
+    $res = $stmt->fetchAll();
+    $reqCache[$parentId] = $res;
+    return $res;
 }
 
-// Products for School
+// Products for School (Optimized batch loading - Eliminates N+1 queries)
 function getProductsForSchool(int $schoolId): array {
+    static $reqCache = [];
+    if (isset($reqCache[$schoolId])) {
+        return $reqCache[$schoolId];
+    }
+
+    $cacheKey = 'school_prods_' . $schoolId;
+    $cached = getFastCache($cacheKey, 60);
+    if ($cached !== null) {
+        $reqCache[$schoolId] = $cached;
+        return $cached;
+    }
+
     $pdo = getDbConnection();
     $stmt = $pdo->prepare("SELECT p.*, 
             COALESCE(sp.custom_price, p.price) as effective_price,
@@ -75,11 +199,25 @@ function getProductsForSchool(int $schoolId): array {
     $stmt->execute([$schoolId]);
     $products = $stmt->fetchAll();
 
-    foreach ($products as &$prod) {
-        $vStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id = ? AND status = 1 ORDER BY id ASC");
-        $vStmt->execute([$prod['id']]);
-        $prod['variants'] = $vStmt->fetchAll();
+    if (!empty($products)) {
+        $prodIds = array_column($products, 'id');
+        $placeholders = implode(',', array_fill(0, count($prodIds), '?'));
+        $vStmt = $pdo->prepare("SELECT * FROM product_variants WHERE product_id IN ($placeholders) AND status = 1 ORDER BY id ASC");
+        $vStmt->execute($prodIds);
+        $allVariants = $vStmt->fetchAll();
+
+        $variantsByProd = [];
+        foreach ($allVariants as $var) {
+            $variantsByProd[$var['product_id']][] = $var;
+        }
+
+        foreach ($products as &$prod) {
+            $prod['variants'] = $variantsByProd[$prod['id']] ?? [];
+        }
     }
+
+    setFastCache($cacheKey, $products, 60);
+    $reqCache[$schoolId] = $products;
     return $products;
 }
 

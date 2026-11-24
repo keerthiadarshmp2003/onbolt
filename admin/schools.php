@@ -93,12 +93,15 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                                 $insSp->execute([$newId, $pid]);
                             }
 
+                            clearFastCache();
                             $msg = "SAVED SUCCESSFULLY";
                             logActivity('create_school', 'schools', (int)$admin['id'], 'admin', "Created single school {$name} (#{$newId}) with code {$code}");
                         } else {
                             $stmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, city = ?, location = ?, contact_phone = ?, parent_id = NULL, has_sub_schools = 0 WHERE id = ?");
                             $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone, $id]);
-                            $msg = "UPDATED SUCCESSFULLY";
+                            clearFastCache();
+                            clearFastCache();
+                        $msg = "UPDATED SUCCESSFULLY";
                             logActivity('update_school', 'schools', (int)$admin['id'], 'admin', "Updated school #{$id} with code {$code}");
                         }
                     } catch (Exception $e) {
@@ -217,6 +220,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                                 }
                             }
 
+                            clearFastCache();
                             $msg = "SAVED SUCCESSFULLY";
                             logActivity('create_school', 'schools', (int)$admin['id'], 'admin', "Created multi-school group {$commonName} (#{$groupId}) with " . count($cleanSubSchools) . " schools");
                         } else {
@@ -259,7 +263,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                                 }
                             }
 
-                            $msg = "UPDATED SUCCESSFULLY";
+                            clearFastCache();
+                            clearFastCache();
+                        $msg = "UPDATED SUCCESSFULLY";
                             logActivity('update_school', 'schools', (int)$admin['id'], 'admin', "Updated multi-school group #{$id}");
                         }
                     } catch (Exception $e) {
@@ -295,6 +301,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     try {
                         $stmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, city = ?, location = ?, contact_phone = ? WHERE id = ?");
                         $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone, $id]);
+                        clearFastCache();
                         $msg = "UPDATED SUCCESSFULLY";
                         logActivity('update_school', 'schools', (int)$admin['id'], 'admin', "Updated sub-school #{$id} with code {$code}");
                     } catch (Exception $e) {
@@ -314,6 +321,7 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
             }
             $pdo->prepare("DELETE FROM school_products WHERE school_id = ?")->execute([$id]);
             $pdo->prepare("DELETE FROM schools WHERE id = ?")->execute([$id]);
+            clearFastCache();
             $msg = "School removed successfully.";
             logActivity('delete_school', 'schools', (int)$admin['id'], 'admin', "Deleted school #{$id}");
         } catch (Exception $e) {
