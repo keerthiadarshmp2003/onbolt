@@ -5,7 +5,6 @@
  */
 
 document.addEventListener('DOMContentLoaded', () => {
-    initCustomCursor();
     initPreloader();
     initHeaderScroll();
     initMobileNav();
@@ -19,66 +18,7 @@ document.addEventListener('DOMContentLoaded', () => {
     initSmoothScrollButtons();
 });
 
-// ==================== 1. HIGH-END CUSTOM FLUID MAGNETIC CURSOR ====================
-function initCustomCursor() {
-    // Only enable on desktop pointer devices
-    if (window.matchMedia('(pointer: coarse)').matches) return;
-
-    const dot = document.getElementById('cursor-dot');
-    const ring = document.getElementById('cursor-ring');
-    if (!dot || !ring) return;
-
-    let mouseX = window.innerWidth / 2;
-    let mouseY = window.innerHeight / 2;
-    let ringX = mouseX;
-    let ringY = mouseY;
-    let isHovering = false;
-
-    window.addEventListener('mousemove', (e) => {
-        mouseX = e.clientX;
-        mouseY = e.clientY;
-        dot.style.transform = `translate(${mouseX}px, ${mouseY}px)`;
-    }, { passive: true });
-
-    function renderCursor() {
-        // Smooth lerp trailing for ring
-        ringX += (mouseX - ringX) * 0.18;
-        ringY += (mouseY - ringY) * 0.18;
-        ring.style.transform = `translate(${ringX}px, ${ringY}px) translate(-50%, -50%)`;
-        requestAnimationFrame(renderCursor);
-    }
-    requestAnimationFrame(renderCursor);
-
-    // Magnetic latch on interactive elements
-    const interactiveSelectors = 'a, button, .btn, .card-tilt, .school-card-editorial, .creative-category-card, input, select, textarea, .hero-floating-card';
-    
-    function attachCursorEvents() {
-        document.querySelectorAll(interactiveSelectors).forEach(el => {
-            if (el.dataset.cursorBound) return;
-            el.dataset.cursorBound = 'true';
-
-            el.addEventListener('mouseenter', () => {
-                ring.classList.add('active');
-            });
-            el.addEventListener('mouseleave', () => {
-                ring.classList.remove('active');
-            });
-        });
-    }
-    attachCursorEvents();
-
-    // Re-check for dynamic elements
-    const observer = new MutationObserver(attachCursorEvents);
-    observer.observe(document.body, { childList: true, subtree: true });
-
-    // Click pulse wave
-    window.addEventListener('mousedown', () => {
-        ring.style.transform += ' scale(0.85)';
-    });
-    window.addEventListener('mouseup', () => {
-        ring.style.transform = ring.style.transform.replace(' scale(0.85)', '');
-    });
-}
+// Custom cursor removed per user request
 
 // ==================== 2. 3-SECOND CINEMATIC PRELOADER (HOMEPAGE ONLY) ====================
 function initPreloader() {

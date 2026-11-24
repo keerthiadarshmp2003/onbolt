@@ -256,47 +256,10 @@ body {
   font-size: 1rem;
 }
 
-/* ==================== HIGH-END CUSTOM FLUID CURSOR ==================== */
-.custom-cursor-dot {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 8px;
-  height: 8px;
-  background-color: var(--brand-primary);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 1000000;
-  transform: translate(-50%, -50%);
-  transition: width 0.2s ease, height 0.2s ease, background-color 0.2s ease;
-  box-shadow: 0 0 12px rgba(255, 103, 2, 0.9);
-}
-
+/* Custom cursor removed per request */
+.custom-cursor-dot,
 .custom-cursor-ring {
-  position: fixed;
-  top: 0;
-  left: 0;
-  width: 36px;
-  height: 36px;
-  border: 1.5px solid rgba(255, 103, 2, 0.6);
-  border-radius: 50%;
-  pointer-events: none;
-  z-index: 999999;
-  transform: translate(-50%, -50%);
-  transition: width 0.25s cubic-bezier(0.1, 1, 0.1, 1), height 0.25s cubic-bezier(0.1, 1, 0.1, 1), border-color 0.2s ease, background-color 0.2s ease;
-}
-
-.custom-cursor-ring.active {
-  width: 56px;
-  height: 56px;
-  background-color: rgba(255, 103, 2, 0.12);
-  border-color: var(--brand-primary);
-}
-
-@media (pointer: coarse) {
-  .custom-cursor-dot, .custom-cursor-ring {
-    display: none !important;
-  }
+  display: none !important;
 }
 
 /* ==================== CONTAINERS & TYPOGRAPHY ==================== */

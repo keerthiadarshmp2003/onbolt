@@ -75,13 +75,9 @@ $cartSummary = $activeSchoolId ? getCartTotals((int)$activeSchoolId) : ['count' 
     <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js" defer></script>
     
     <!-- Main Interactive Script -->
-    <script src="<?= BASE_URL ?>/assets/js/main.js?v=3.2" defer></script>
+    <script src="<?= BASE_URL ?>/assets/js/main.js?v=3.3" defer></script>
 </head>
 <body>
-
-<!-- Custom Fluid Magnetic Cursor -->
-<div class="custom-cursor-dot" id="cursor-dot"></div>
-<div class="custom-cursor-ring" id="cursor-ring"></div>
 
 <?php if (!empty($activeNav) && $activeNav === 'home'): ?>
 <!-- 3-SECOND CINEMATIC PRELOADER WITH ACTUAL ONBOLT LOGO (HOMEPAGE ONLY) -->
