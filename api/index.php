@@ -3,6 +3,11 @@
  * OnBolt Digital Platform - Vercel Serverless Master Router
  */
 
+// Enable temporary session directory for serverless environments
+if (is_dir('/tmp') && is_writable('/tmp')) {
+    @session_save_path('/tmp');
+}
+
 // Normalize requested URI path
 $requestUri = $_SERVER['REQUEST_URI'] ?? '/';
 $parsedUrl = parse_url($requestUri);
