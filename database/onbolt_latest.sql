@@ -85,6 +85,31 @@ INSERT INTO `admins` VALUES (1,1,NULL,'admin','OnBolt Super Administrator','info
 UNLOCK TABLES;
 
 --
+-- Table structure for table `admin_schools`
+--
+
+DROP TABLE IF EXISTS `admin_schools`;
+/*!40101 SET @saved_cs_client     = @@character_set_client */;
+/*!40101 SET character_set_client = utf8 */;
+CREATE TABLE `admin_schools` (
+  `id` int(10) unsigned NOT NULL AUTO_INCREMENT,
+  `admin_id` int(10) unsigned NOT NULL,
+  `school_id` int(10) unsigned NOT NULL,
+  `created_at` timestamp NOT NULL DEFAULT current_timestamp(),
+  PRIMARY KEY (`id`),
+  UNIQUE KEY `uq_admin_school` (`admin_id`, `school_id`),
+  KEY `idx_admin_schools_admin` (`admin_id`),
+  KEY `idx_admin_schools_school` (`school_id`)
+) ENGINE=InnoDB AUTO_INCREMENT=3 DEFAULT CHARSET=utf8mb4 COLLATE=utf8mb4_unicode_ci;
+/*!40101 SET character_set_client = @saved_cs_client */;
+
+LOCK TABLES `admin_schools` WRITE;
+/*!40000 ALTER TABLE `admin_schools` DISABLE KEYS */;
+INSERT INTO `admin_schools` VALUES (1,5,28,'2026-11-24 15:03:14'),(2,6,29,'2026-11-24 15:03:14');
+/*!40000 ALTER TABLE `admin_schools` ENABLE KEYS */;
+UNLOCK TABLES;
+
+--
 -- Table structure for table `application_settings`
 --
 

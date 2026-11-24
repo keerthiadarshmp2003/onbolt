@@ -29,6 +29,23 @@ $roles = $pdo->query("SELECT id, name, slug FROM roles WHERE slug IN ('superadmi
 // Fetch active schools for the dropdown
 $schools = $pdo->query("SELECT id, name, code, parent_id, has_sub_schools FROM schools WHERE status = 1 ORDER BY name ASC")->fetchAll();
 
+// Organize schools into hierarchy
+$hierarchicalSchools = [];
+$subSchoolsByParent = [];
+foreach ($schools as $sch) {
+    if (!empty($sch['parent_id'])) {
+        $subSchoolsByParent[(int)$sch['parent_id']][] = $sch;
+    }
+}
+foreach ($schools as $sch) {
+    if (empty($sch['parent_id'])) {
+        $hierarchicalSchools[] = [
+            'school' => $sch,
+            'subs' => $subSchoolsByParent[(int)$sch['id']] ?? []
+        ];
+    }
+}
+
 // Handle User Actions (Create, Update, Delete)
 if ($_SERVER['REQUEST_METHOD'] === 'POST') {
     $action = trim($_POST['action'] ?? '');
@@ -37,7 +54,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = strtolower(trim($_POST['username'] ?? ''));
         $password = trim($_POST['password'] ?? '');
         $roleId = (int)($_POST['role_id'] ?? 0);
-        $schoolId = !empty($_POST['school_id']) ? (int)$_POST['school_id'] : null;
+        
+        // Multi-School IDs handling
+        $schoolIds = [];
+        if (!empty($_POST['school_ids']) && is_array($_POST['school_ids'])) {
+            $schoolIds = array_values(array_filter(array_map('intval', $_POST['school_ids'])));
+        } elseif (!empty($_POST['school_id'])) {
+            $schoolIds = [(int)$_POST['school_id']];
+        }
+        $primarySchoolId = !empty($schoolIds) ? $schoolIds[0] : null;
 
         if (empty($username) || empty($password) || $roleId <= 0) {
             $err = 'Username, Password, and Role are mandatory.';
@@ -56,11 +81,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $email = $username . '@onbolt.in';
 
                     $stmt = $pdo->prepare("INSERT INTO admins (role_id, school_id, username, full_name, email, password_hash, status, created_at, updated_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW(), NOW())");
-                    $stmt->execute([$roleId, $schoolId, $username, $fullName, $email, $hash]);
+                    $stmt->execute([$roleId, $primarySchoolId, $username, $fullName, $email, $hash]);
                     $newUserId = (int)$pdo->lastInsertId();
 
-                    logActivity('create_user', 'users', (int)$admin['id'], 'admin', "Created user '{$username}' (#{$newUserId}) with role #{$roleId}");
-                    $msg = "User '{$username}' created successfully!";
+                    // Sync multi-school associations in admin_schools table
+                    if (!empty($schoolIds)) {
+                        $asStmt = $pdo->prepare("INSERT IGNORE INTO admin_schools (admin_id, school_id) VALUES (?, ?)");
+                        foreach ($schoolIds as $sId) {
+                            $asStmt->execute([$newUserId, $sId]);
+                        }
+                    }
+
+                    logActivity('create_user', 'users', (int)$admin['id'], 'admin', "Created user '{$username}' (#{$newUserId}) with role #{$roleId} and " . count($schoolIds) . " affiliated schools");
+                    $msg = "User '{$username}' created successfully with " . (empty($schoolIds) ? 'Global (All Schools)' : count($schoolIds) . ' assigned school(s)') . "!";
                 } catch (Exception $e) {
                     $err = 'Failed to create user: ' . $e->getMessage();
                 }
@@ -71,7 +104,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
         $username = strtolower(trim($_POST['username'] ?? ''));
         $password = trim($_POST['password'] ?? '');
         $roleId = (int)($_POST['role_id'] ?? 0);
-        $schoolId = !empty($_POST['school_id']) ? (int)$_POST['school_id'] : null;
+
+        // Multi-School IDs handling
+        $schoolIds = [];
+        if (isset($_POST['school_ids']) && is_array($_POST['school_ids'])) {
+            $schoolIds = array_values(array_filter(array_map('intval', $_POST['school_ids'])));
+        } elseif (!empty($_POST['school_id'])) {
+            $schoolIds = [(int)$_POST['school_id']];
+        }
+        $primarySchoolId = !empty($schoolIds) ? $schoolIds[0] : null;
 
         if ($userId <= 0 || empty($username) || $roleId <= 0) {
             $err = 'Invalid user details provided.';
@@ -86,13 +127,22 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     if (!empty($password)) {
                         $hash = password_hash($password, PASSWORD_DEFAULT);
                         $stmt = $pdo->prepare("UPDATE admins SET username = ?, password_hash = ?, role_id = ?, school_id = ?, updated_at = NOW() WHERE id = ?");
-                        $stmt->execute([$username, $hash, $roleId, $schoolId, $userId]);
+                        $stmt->execute([$username, $hash, $roleId, $primarySchoolId, $userId]);
                     } else {
                         $stmt = $pdo->prepare("UPDATE admins SET username = ?, role_id = ?, school_id = ?, updated_at = NOW() WHERE id = ?");
-                        $stmt->execute([$username, $roleId, $schoolId, $userId]);
+                        $stmt->execute([$username, $roleId, $primarySchoolId, $userId]);
                     }
 
-                    logActivity('update_user', 'users', (int)$admin['id'], 'admin', "Updated user #{$userId} ({$username})");
+                    // Sync multi-school associations in admin_schools table
+                    $pdo->prepare("DELETE FROM admin_schools WHERE admin_id = ?")->execute([$userId]);
+                    if (!empty($schoolIds)) {
+                        $asStmt = $pdo->prepare("INSERT IGNORE INTO admin_schools (admin_id, school_id) VALUES (?, ?)");
+                        foreach ($schoolIds as $sId) {
+                            $asStmt->execute([$userId, $sId]);
+                        }
+                    }
+
+                    logActivity('update_user', 'users', (int)$admin['id'], 'admin', "Updated user #{$userId} ({$username}) with " . count($schoolIds) . " affiliated schools");
                     $msg = "User '{$username}' updated successfully!";
                 } catch (Exception $e) {
                     $err = 'Failed to update user: ' . $e->getMessage();
@@ -110,6 +160,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 $check->execute([$userId]);
                 $uName = $check->fetchColumn() ?: "ID #{$userId}";
 
+                $pdo->prepare("DELETE FROM admin_schools WHERE admin_id = ?")->execute([$userId]);
                 $pdo->prepare("DELETE FROM admins WHERE id = ?")->execute([$userId]);
                 logActivity('delete_user', 'users', (int)$admin['id'], 'admin', "Deleted user account '{$uName}' (#{$userId})");
                 $msg = "User '{$uName}' deleted successfully!";
@@ -148,16 +199,99 @@ $usersQuery = "SELECT a.*, r.name as role_name, r.slug as role_slug, s.name as s
                WHERE 1=1";
 
 if ($subSchoolFilter > 0) {
-    $usersQuery .= " AND a.school_id = {$subSchoolFilter}";
+    $usersQuery .= " AND (a.school_id = {$subSchoolFilter} OR a.id IN (SELECT admin_id FROM admin_schools WHERE school_id = {$subSchoolFilter}))";
 } elseif ($schoolFilter > 0) {
-    $usersQuery .= " AND (a.school_id = {$schoolFilter} OR s.parent_id = {$schoolFilter})";
+    $usersQuery .= " AND (a.school_id = {$schoolFilter} OR s.parent_id = {$schoolFilter} OR a.id IN (SELECT admin_id FROM admin_schools WHERE school_id = {$schoolFilter} OR school_id IN (SELECT id FROM schools WHERE parent_id = {$schoolFilter})))";
 }
 
 $usersQuery .= " ORDER BY a.id DESC";
 $createdUsers = $pdo->query($usersQuery)->fetchAll();
 
+// Fetch all admin multi-school associations
+$adminSchoolsRows = $pdo->query("SELECT ash.admin_id, s.id as school_id, s.name as school_name, s.code as school_code, s.parent_id
+                                 FROM admin_schools ash
+                                 JOIN schools s ON ash.school_id = s.id
+                                 ORDER BY s.name ASC")->fetchAll(PDO::FETCH_ASSOC);
+$adminSchoolsMap = [];
+foreach ($adminSchoolsRows as $r) {
+    $adminSchoolsMap[(int)$r['admin_id']][] = $r;
+}
+
 $adminActive = 'users';
 $adminTitle = 'User Management (Super Admin)';
+
+function renderSchoolMultiSelect($prefix, $hierarchicalSchools) {
+    ob_start();
+    ?>
+    <div class="custom-multi-school-picker" id="<?= $prefix ?>-school-picker-container" style="position:relative; width:100%;">
+        <button type="button" class="form-control" id="<?= $prefix ?>-school-picker-btn" onclick="toggleSchoolDropdown('<?= $prefix ?>')" style="text-align:left; display:flex; justify-content:space-between; align-items:center; cursor:pointer; background:#ffffff; font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md); border:1.5px solid var(--brand-border); width:100%; min-height:42px;">
+            <span id="<?= $prefix ?>-school-picker-label" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:calc(100% - 20px); color:#64748B; font-weight:600;">-- All Schools / Global System Level --</span>
+            <span style="font-size:0.75rem; color:var(--brand-muted); margin-left:0.5rem; flex-shrink:0;">▼</span>
+        </button>
+        
+        <div id="<?= $prefix ?>-school-dropdown" class="school-dropdown-menu" style="display:none; position:absolute; top:calc(100% + 6px); left:0; width:360px; max-width:calc(100vw - 32px); background:#ffffff; border:1.5px solid #CBD5E1; border-radius:12px; box-shadow:0 12px 30px -4px rgba(15, 23, 42, 0.18), 0 4px 6px -2px rgba(15, 23, 42, 0.06); z-index:99999; overflow:hidden;">
+            <!-- Top Fixed Search & Actions Header -->
+            <div style="padding:0.75rem 0.85rem 0.6rem 0.85rem; background:#F8FAFC; border-bottom:1px solid #E2E8F0;">
+                <div style="position:relative; margin-bottom:0.45rem;">
+                    <input type="text" placeholder="Search school name..." onkeyup="filterSchoolOptions('<?= $prefix ?>', this.value)" style="width:100%; box-sizing:border-box; font-size:0.82rem; padding:0.45rem 0.75rem 0.45rem 2rem; border:1.5px solid #CBD5E1; border-radius:6px; background:#ffffff; outline:none;" autocomplete="off">
+                    <span style="position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); font-size:0.8rem; color:#94A3B8;">🔍</span>
+                </div>
+                <div style="display:flex; justify-content:space-between; align-items:center;">
+                    <span style="font-size:0.72rem; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.5px;">School Directory</span>
+                    <div style="display:flex; gap:0.4rem;">
+                        <button type="button" onclick="selectAllSchools('<?= $prefix ?>')" style="padding:0.25rem 0.6rem; font-size:0.72rem; font-weight:700; background:#EFF6FF; color:#2563EB; border:1px solid #BFDBFE; border-radius:4px; cursor:pointer;">Select All</button>
+                        <button type="button" onclick="clearAllSchools('<?= $prefix ?>')" style="padding:0.25rem 0.6rem; font-size:0.72rem; font-weight:700; background:#FFFFFF; color:#64748B; border:1px solid #CBD5E1; border-radius:4px; cursor:pointer;">Clear</button>
+                    </div>
+                </div>
+            </div>
+            
+            <!-- Scrollable Body with Fixed Height -->
+            <div style="max-height:260px; overflow-y:auto; overflow-x:hidden; padding:0.6rem;">
+                <!-- Global option -->
+                <label style="display:flex; align-items:center; gap:0.6rem; padding:0.45rem 0.65rem; border-radius:6px; cursor:pointer; font-size:0.84rem; font-weight:700; color:#1E293B; background:#F1F5F9; margin-bottom:0.45rem; border:1px solid #E2E8F0;" class="school-opt-row">
+                    <input type="checkbox" id="<?= $prefix ?>-school-global-chk" checked onchange="handleGlobalToggle('<?= $prefix ?>', this.checked)" style="width:16px; height:16px; accent-color:var(--brand-primary); cursor:pointer;">
+                    <span>🌐 All Schools / Global System Level</span>
+                </label>
+                
+                <!-- School Hierarchy List -->
+                <div id="<?= $prefix ?>-school-list">
+                    <?php foreach ($hierarchicalSchools as $item): ?>
+                        <?php $main = $item['school']; $subs = $item['subs']; ?>
+                        <div class="school-opt-group" id="<?= $prefix ?>-group-<?= (int)$main['id'] ?>" data-text="<?= strtolower(sanitize($main['name'] . ' ' . $main['code'])) ?>" style="margin-bottom:0.4rem; border-radius:6px; border:1px solid #E2E8F0; background:#FFFFFF; overflow:hidden;">
+                            <label style="display:flex; align-items:center; justify-content:space-between; gap:0.5rem; padding:0.5rem 0.65rem; cursor:pointer; font-size:0.84rem; font-weight:700; color:#0F172A; margin:0;">
+                                <div style="display:flex; align-items:center; gap:0.6rem;">
+                                    <input type="checkbox" name="school_ids[]" value="<?= (int)$main['id'] ?>" class="<?= $prefix ?>-school-chk <?= $prefix ?>-main-school-chk" data-school-id="<?= (int)$main['id'] ?>" data-has-subs="<?= !empty($subs) ? '1' : '0' ?>" data-name="<?= sanitize($main['name']) ?>" onchange="handleMainSchoolCheckChange('<?= $prefix ?>', <?= (int)$main['id'] ?>, this.checked)" style="width:16px; height:16px; accent-color:var(--brand-primary); cursor:pointer;">
+                                    <span><?= sanitize($main['name']) ?> <?= !empty($main['code']) ? '<span style="color:#64748B; font-size:0.75rem; font-weight:600;">(' . sanitize($main['code']) . ')</span>' : '' ?></span>
+                                </div>
+                                <?php if (!empty($subs)): ?>
+                                    <span class="<?= $prefix ?>-subs-indicator-<?= (int)$main['id'] ?>" style="font-size:0.7rem; color:#64748B; font-weight:700; background:#F1F5F9; border:1px solid #E2E8F0; padding:1px 7px; border-radius:9999px;">
+                                        <?= count($subs) ?> Sub Schools
+                                    </span>
+                                <?php endif; ?>
+                            </label>
+                            
+                            <?php if (!empty($subs)): ?>
+                                <!-- Sub Schools Container: ONLY displayed when main school checked in -->
+                                <div id="<?= $prefix ?>-subs-container-<?= (int)$main['id'] ?>" class="<?= $prefix ?>-subs-container" style="display:none; padding:0.4rem 0.65rem 0.5rem 1.8rem; background:#F8FAFC; border-top:1px solid #E2E8F0; flex-direction:column; gap:0.25rem;">
+                                    <div style="font-size:0.68rem; color:#64748B; font-weight:700; text-transform:uppercase; margin-bottom:0.15rem; letter-spacing:0.4px;">Under Schools (Sub-Units):</div>
+                                    <?php foreach ($subs as $sub): ?>
+                                        <label class="school-opt-sub" data-text="<?= strtolower(sanitize($sub['name'] . ' ' . $sub['code'])) ?>" style="display:flex; align-items:center; gap:0.5rem; padding:0.3rem 0.45rem; border-radius:4px; cursor:pointer; font-size:0.8rem; color:#334155; margin:0;">
+                                            <input type="checkbox" name="school_ids[]" value="<?= (int)$sub['id'] ?>" class="<?= $prefix ?>-school-chk <?= $prefix ?>-sub-school-chk-<?= (int)$main['id'] ?>" data-parent-id="<?= (int)$main['id'] ?>" data-name="<?= sanitize($sub['name']) ?>" onchange="handleSubSchoolCheckChange('<?= $prefix ?>', <?= (int)$main['id'] ?>)" style="width:15px; height:15px; accent-color:var(--brand-primary); cursor:pointer;">
+                                            <span>↳ <?= sanitize($sub['name']) ?> <?= !empty($sub['code']) ? '<span style="color:#94A3B8; font-size:0.72rem;">(' . sanitize($sub['code']) . ')</span>' : '' ?></span>
+                                        </label>
+                                    <?php endforeach; ?>
+                                </div>
+                            <?php endif; ?>
+                        </div>
+                    <?php endforeach; ?>
+                </div>
+            </div>
+        </div>
+    </div>
+    <?php
+    return ob_get_clean();
+}
+
 require_once __DIR__ . '/header.php';
 ?>
 
@@ -196,19 +330,12 @@ require_once __DIR__ . '/header.php';
             <input type="hidden" name="action" value="create_user">
 
             <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1.25rem; margin-bottom:1.5rem;">
-                <!-- School Name Dropdown -->
+                <!-- School Name Multi-Select Dropdown -->
                 <div class="form-group">
                     <label class="form-label" style="font-weight:700; font-size:0.85rem; color:var(--brand-dark);">
-                        School Name <span style="font-size:0.75rem; color:var(--brand-muted);">(Optional for Superadmin)</span>
+                        School Name <span style="font-size:0.75rem; color:var(--brand-muted);">(Multi-Select Allowed)</span>
                     </label>
-                    <select name="school_id" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md);">
-                        <option value="">-- All Schools / Global System Level --</option>
-                        <?php foreach ($schools as $sch): ?>
-                            <option value="<?= $sch['id'] ?>">
-                                <?= sanitize($sch['name']) ?> <?= !empty($sch['code']) ? '(' . sanitize($sch['code']) . ')' : '' ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </select>
+                    <?= renderSchoolMultiSelect('create', $hierarchicalSchools) ?>
                 </div>
 
                 <!-- Username Input -->
@@ -312,15 +439,40 @@ require_once __DIR__ . '/header.php';
                         </tr>
                     <?php else: ?>
                         <?php foreach ($createdUsers as $u): ?>
+                            <?php
+                            $userSchools = $adminSchoolsMap[(int)$u['id']] ?? [];
+                            if (empty($userSchools) && !empty($u['school_id'])) {
+                                $userSchools = [[
+                                    'school_id' => (int)$u['school_id'],
+                                    'school_name' => $u['school_name'] ?? 'School #' . $u['school_id'],
+                                    'school_code' => $u['school_code'] ?? ''
+                                ]];
+                            }
+                            $userSchoolIds = array_map(function($s) { return (int)$s['school_id']; }, $userSchools);
+                            $userSchoolCount = count($userSchools);
+                            ?>
                             <tr>
-                                <td style="padding:1rem 1.25rem; font-weight:700;">
-                                    <?php if (!empty($u['school_name'])): ?>
-                                        <span style="color:#0F172A;"><?= sanitize($u['school_name']) ?></span>
-                                        <?php if (!empty($u['school_code'])): ?>
-                                            <span style="font-size:0.72rem; color:var(--brand-muted); margin-left:4px;">(<?= sanitize($u['school_code']) ?>)</span>
+                                <td style="padding:1rem 1.25rem;">
+                                    <?php if ($userSchoolCount === 0): ?>
+                                        <span style="color:#64748B; font-weight:600; font-size:0.82rem; font-style:italic;">🌐 All Schools (Global)</span>
+                                    <?php elseif ($userSchoolCount === 1): ?>
+                                        <span style="color:#0F172A; font-weight:700;"><?= sanitize($userSchools[0]['school_name']) ?></span>
+                                        <?php if (!empty($userSchools[0]['school_code'])): ?>
+                                            <span style="font-size:0.72rem; color:var(--brand-muted); margin-left:4px;">(<?= sanitize($userSchools[0]['school_code']) ?>)</span>
                                         <?php endif; ?>
                                     <?php else: ?>
-                                        <span style="color:#64748B; font-weight:600; font-size:0.82rem; font-style:italic;">All Schools (Global)</span>
+                                        <div style="margin-bottom:0.35rem;">
+                                            <span style="display:inline-flex; align-items:center; gap:0.3rem; font-size:0.75rem; font-weight:800; background:rgba(255,103,2,0.12); color:var(--brand-primary); border:1px solid rgba(255,103,2,0.25); padding:0.2rem 0.6rem; border-radius:9999px;">
+                                                <span>🏢</span> <?= $userSchoolCount ?> Schools Affiliated
+                                            </span>
+                                        </div>
+                                        <div style="display:flex; flex-wrap:wrap; gap:4px; max-width:320px;">
+                                            <?php foreach ($userSchools as $us): ?>
+                                                <span style="font-size:0.72rem; font-weight:600; background:#F1F5F9; color:#334155; padding:2px 6px; border-radius:4px; border:1px solid #E2E8F0;" title="<?= sanitize($us['school_name']) ?>">
+                                                    <?= sanitize($us['school_name']) ?>
+                                                </span>
+                                            <?php endforeach; ?>
+                                        </div>
                                     <?php endif; ?>
                                 </td>
                                 <td style="padding:1rem 1.25rem;">
@@ -351,7 +503,7 @@ require_once __DIR__ . '/header.php';
                                             'id' => $u['id'],
                                             'username' => $u['username'],
                                             'role_id' => $u['role_id'],
-                                            'school_id' => $u['school_id'] ?: ''
+                                            'school_ids' => $userSchoolIds
                                         ])) ?>)">
                                             Edit
                                         </button>
@@ -391,15 +543,8 @@ require_once __DIR__ . '/header.php';
             <input type="hidden" name="user_id" id="edit-user-id" value="">
 
             <div class="form-group" style="margin-bottom:1.2rem;">
-                <label class="form-label" style="font-weight:700; font-size:0.85rem;">School Name</label>
-                <select name="school_id" id="edit-user-school" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem;">
-                    <option value="">-- All Schools / Global System Level --</option>
-                    <?php foreach ($schools as $sch): ?>
-                        <option value="<?= $sch['id'] ?>">
-                            <?= sanitize($sch['name']) ?> <?= !empty($sch['code']) ? '(' . sanitize($sch['code']) . ')' : '' ?>
-                        </option>
-                    <?php endforeach; ?>
-                </select>
+                <label class="form-label" style="font-weight:700; font-size:0.85rem;">School Name <span style="font-size:0.75rem; color:var(--brand-muted);">(Multi-Select Allowed)</span></label>
+                <?= renderSchoolMultiSelect('edit', $hierarchicalSchools) ?>
             </div>
 
             <div class="form-group" style="margin-bottom:1.2rem;">
@@ -430,6 +575,143 @@ require_once __DIR__ . '/header.php';
 </div>
 
 <script>
+function toggleSchoolDropdown(prefix) {
+    const dropdown = document.getElementById(prefix + '-school-dropdown');
+    if (!dropdown) return;
+    const isVisible = dropdown.style.display === 'block';
+    document.querySelectorAll('.school-dropdown-menu').forEach(el => el.style.display = 'none');
+    dropdown.style.display = isVisible ? 'none' : 'block';
+}
+
+function handleMainSchoolCheckChange(prefix, mainId, isChecked) {
+    const subsContainer = document.getElementById(prefix + '-subs-container-' + mainId);
+    if (subsContainer) {
+        if (isChecked) {
+            // ONLY display the sub school when the main school check in
+            subsContainer.style.display = 'flex';
+            // Check all sub-schools under this main school by default
+            document.querySelectorAll('.' + prefix + '-sub-school-chk-' + mainId).forEach(c => c.checked = true);
+        } else {
+            // Hide sub-schools when main school is unchecked
+            subsContainer.style.display = 'none';
+            // Uncheck sub-schools under this main school
+            document.querySelectorAll('.' + prefix + '-sub-school-chk-' + mainId).forEach(c => c.checked = false);
+        }
+    }
+    handleSchoolCheckChange(prefix);
+}
+
+function handleSubSchoolCheckChange(prefix, mainId) {
+    const subChks = Array.from(document.querySelectorAll('.' + prefix + '-sub-school-chk-' + mainId));
+    const anyChecked = subChks.some(c => c.checked);
+    const mainChk = document.querySelector('.' + prefix + '-main-school-chk[value="' + mainId + '"]');
+    const subsContainer = document.getElementById(prefix + '-subs-container-' + mainId);
+    
+    if (anyChecked) {
+        if (mainChk) mainChk.checked = true;
+        if (subsContainer) subsContainer.style.display = 'flex';
+    }
+    handleSchoolCheckChange(prefix);
+}
+
+function handleGlobalToggle(prefix, isChecked) {
+    if (isChecked) {
+        document.querySelectorAll('.' + prefix + '-school-chk').forEach(c => c.checked = false);
+        document.querySelectorAll('.' + prefix + '-subs-container').forEach(el => el.style.display = 'none');
+    }
+    updateSchoolPickerLabel(prefix);
+}
+
+function handleSchoolCheckChange(prefix) {
+    const chks = Array.from(document.querySelectorAll('.' + prefix + '-school-chk'));
+    const checkedCount = chks.filter(c => c.checked).length;
+    const globalChk = document.getElementById(prefix + '-school-global-chk');
+    if (globalChk) {
+        globalChk.checked = (checkedCount === 0);
+    }
+    updateSchoolPickerLabel(prefix);
+}
+
+function selectAllSchools(prefix) {
+    document.querySelectorAll('.' + prefix + '-school-chk').forEach(c => c.checked = true);
+    document.querySelectorAll('.' + prefix + '-subs-container').forEach(el => el.style.display = 'flex');
+    const globalChk = document.getElementById(prefix + '-school-global-chk');
+    if (globalChk) globalChk.checked = false;
+    updateSchoolPickerLabel(prefix);
+}
+
+function clearAllSchools(prefix) {
+    document.querySelectorAll('.' + prefix + '-school-chk').forEach(c => c.checked = false);
+    document.querySelectorAll('.' + prefix + '-subs-container').forEach(el => el.style.display = 'none');
+    const globalChk = document.getElementById(prefix + '-school-global-chk');
+    if (globalChk) globalChk.checked = true;
+    updateSchoolPickerLabel(prefix);
+}
+
+function filterSchoolOptions(prefix, query) {
+    const q = (query || '').toLowerCase().trim();
+    const container = document.getElementById(prefix + '-school-list');
+    if (!container) return;
+    const groups = container.querySelectorAll('.school-opt-group');
+    groups.forEach(group => {
+        const text = (group.getAttribute('data-text') || '').toLowerCase();
+        const subs = group.querySelectorAll('.school-opt-sub');
+        let anySubMatch = false;
+        subs.forEach(sub => {
+            const subText = (sub.getAttribute('data-text') || '').toLowerCase();
+            if (subText.includes(q)) {
+                sub.style.display = 'flex';
+                anySubMatch = true;
+            } else {
+                sub.style.display = q ? 'none' : 'flex';
+            }
+        });
+        
+        const subsContainer = group.querySelector('.' + prefix + '-subs-container');
+        const mainChk = group.querySelector('.' + prefix + '-main-school-chk');
+        
+        if (text.includes(q) || anySubMatch || !q) {
+            group.style.display = 'block';
+            if (subsContainer) {
+                if (q && anySubMatch) {
+                    subsContainer.style.display = 'flex';
+                } else if (!q) {
+                    subsContainer.style.display = (mainChk && mainChk.checked) ? 'flex' : 'none';
+                }
+            }
+        } else {
+            group.style.display = 'none';
+        }
+    });
+}
+
+function updateSchoolPickerLabel(prefix) {
+    const labelEl = document.getElementById(prefix + '-school-picker-label');
+    if (!labelEl) return;
+    const chks = Array.from(document.querySelectorAll('.' + prefix + '-school-chk'));
+    const checked = chks.filter(c => c.checked);
+    if (checked.length === 0) {
+        labelEl.textContent = '-- All Schools / Global System Level --';
+        labelEl.style.color = '#64748B';
+    } else if (checked.length === 1) {
+        labelEl.textContent = checked[0].getAttribute('data-name');
+        labelEl.style.color = '#0F172A';
+    } else if (checked.length === 2) {
+        labelEl.textContent = checked[0].getAttribute('data-name') + ', ' + checked[1].getAttribute('data-name');
+        labelEl.style.color = '#0F172A';
+    } else {
+        labelEl.textContent = checked.length + ' Schools Selected (' + checked[0].getAttribute('data-name') + ', +' + (checked.length - 1) + ' more)';
+        labelEl.style.color = '#EA580C';
+    }
+}
+
+// Close multi-select dropdown when clicking outside
+document.addEventListener('click', function(e) {
+    if (!e.target.closest('.custom-multi-school-picker')) {
+        document.querySelectorAll('.school-dropdown-menu').forEach(el => el.style.display = 'none');
+    }
+});
+
 function handleMainSchoolUserChange(mainSelect) {
     const subSelect = document.getElementById('users_sub_school_id_select');
     if (subSelect) {
@@ -441,8 +723,40 @@ function handleMainSchoolUserChange(mainSelect) {
 function openEditUserModal(user) {
     document.getElementById('edit-user-id').value = user.id;
     document.getElementById('edit-user-username').value = user.username;
-    document.getElementById('edit-user-school').value = user.school_id || '';
     document.getElementById('edit-user-role').value = user.role_id;
+    
+    // Clear all edit checkboxes & hide all subs containers
+    const editChks = document.querySelectorAll('.edit-school-chk');
+    editChks.forEach(c => c.checked = false);
+    document.querySelectorAll('.edit-subs-container').forEach(el => el.style.display = 'none');
+    
+    const schoolIds = Array.isArray(user.school_ids) ? user.school_ids.map(Number) : [];
+    schoolIds.forEach(id => {
+        const targetChk = document.querySelector('.edit-school-chk[value="' + id + '"]');
+        if (targetChk) {
+            targetChk.checked = true;
+            // If it's a sub school, show parent's subs container & check parent
+            const parentId = targetChk.getAttribute('data-parent-id');
+            if (parentId) {
+                const parentChk = document.querySelector('.edit-main-school-chk[value="' + parentId + '"]');
+                if (parentChk) parentChk.checked = true;
+                const subsContainer = document.getElementById('edit-subs-container-' + parentId);
+                if (subsContainer) subsContainer.style.display = 'flex';
+            }
+            // If it's a main school with subs container
+            const ownSubsContainer = document.getElementById('edit-subs-container-' + id);
+            if (ownSubsContainer) {
+                ownSubsContainer.style.display = 'flex';
+            }
+        }
+    });
+    
+    const globalChk = document.getElementById('edit-school-global-chk');
+    if (globalChk) {
+        globalChk.checked = (schoolIds.length === 0);
+    }
+    
+    updateSchoolPickerLabel('edit');
     document.getElementById('edit-user-modal').style.display = 'flex';
 }
 

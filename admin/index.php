@@ -109,6 +109,16 @@ $recentOrders = $pdo->query($recentOrdersSql)->fetchAll();
         </div>
     </a>
 
+    <a href="<?= BASE_URL ?>/admin/create_order.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1.5px solid #FED7AA; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
+        <div style="width:50px; height:50px; border-radius:50%; background:rgba(255,103,2,0.12); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+            🛍️
+        </div>
+        <div>
+            <div style="font-weight:800; font-size:1.05rem; color:var(--brand-dark);">Create Walk-in Order</div>
+            <div style="font-size:0.8rem; color:var(--brand-muted); margin-top:0.2rem;">Counter desk for parents ordering or paying in person</div>
+        </div>
+    </a>
+
     <a href="<?= BASE_URL ?>/admin/schools.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
         <div style="width:50px; height:50px; border-radius:50%; background:rgba(37,99,235,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
             🏫

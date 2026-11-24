@@ -1,6 +1,6 @@
 # OnBolt Platform - Apache URL Rewriting Engine
 RewriteEngine On
-RewriteBase /onbolt/
+# RewriteBase automatically adapts to document root or subfolder (omit hardcoded /onbolt/ so it works on cloud roots)
 
 # Exclude existing files and directories
 RewriteCond %{REQUEST_FILENAME} -f [OR]

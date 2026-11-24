@@ -224,6 +224,9 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
         <a href="<?= BASE_URL ?>/admin/orders.php" class="admin-nav-item <?= ($adminActive ?? '') === 'orders' ? 'active' : '' ?>">
             <span>📦</span> Parent Purchases &amp; Messages
         </a>
+        <a href="<?= BASE_URL ?>/admin/create_order.php" class="admin-nav-item <?= ($adminActive ?? '') === 'create_order' ? 'active' : '' ?>">
+            <span>🛍️</span> Create Walk-in Order
+        </a>
         <a href="<?= BASE_URL ?>/admin/partner_percentage.php" class="admin-nav-item <?= ($adminActive ?? '') === 'partner_percentage' ? 'active' : '' ?>">
             <span>💼</span> Partner Percentage
         </a>

@@ -19,10 +19,11 @@ if (session_status() === PHP_SESSION_NONE) {
 require_once __DIR__ . '/database.php';
 
 // Detect Base URL dynamically with proxy SSL support & cloud host detection
+$rawBase = '';
 if (getenv('APP_URL')) {
-    define('BASE_URL', rtrim(getenv('APP_URL'), '/'));
+    $rawBase = (string)getenv('APP_URL');
 } elseif (getenv('BASE_URL')) {
-    define('BASE_URL', rtrim(getenv('BASE_URL'), '/'));
+    $rawBase = (string)getenv('BASE_URL');
 } else {
     $isHttps = false;
     if (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') {
@@ -45,8 +46,13 @@ if (getenv('APP_URL')) {
     } else {
         $basePath = '';
     }
-    define('BASE_URL', rtrim($protocol . $host . $basePath, '/'));
+    $rawBase = $protocol . $host . $basePath;
 }
+
+// Ensure BASE_URL never has trailing slashes or accidental subfolder paths like /schools or /admin
+$cleanBase = rtrim($rawBase, '/');
+$cleanBase = preg_replace('#/(schools|admin|api|pages)(/.*)?$#i', '', $cleanBase);
+define('BASE_URL', rtrim($cleanBase, '/'));
 define('ROOT_PATH', dirname(__DIR__));
 
 // Brand Palette (Derived precisely from OnBolt Actual Logo)

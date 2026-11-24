@@ -1149,6 +1149,9 @@ require_once __DIR__ . '/header.php';
 
     <!-- Quick Export Actions (Always visible, perfectly right-aligned) -->
     <div style="display:inline-flex; gap:0.4rem; align-items:center; flex-shrink:0;">
+        <a href="<?= BASE_URL ?>/admin/create_order.php" class="btn btn-primary btn-sm" style="padding:0.4rem 0.85rem; font-size:0.8rem; font-weight:800; display:inline-flex; align-items:center; gap:5px; border-radius:var(--radius-md); box-shadow:0 1px 3px rgba(255,103,2,0.3); text-decoration:none;">
+            <span>➕</span> New Walk-in Order
+        </a>
         <button type="button" onclick="exportOrders('excel')" class="btn btn-outline btn-sm" style="padding:0.4rem 0.75rem; font-size:0.8rem; font-weight:700; color:#059669; border-color:#10B981; background:#ffffff; display:inline-flex; align-items:center; gap:5px; box-shadow:0 1px 2px rgba(0,0,0,0.04); cursor:pointer; white-space:nowrap; border-radius:var(--radius-md);" title="Export filtered orders to Excel spreadsheet (.xls)">
             <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="8" y1="13" x2="16" y2="13"></line><line x1="8" y1="17" x2="16" y2="17"></line></svg>
             Excel
@@ -1596,7 +1599,11 @@ require_once __DIR__ . '/header.php';
 
         <!-- Footer -->
         <div style="padding:1rem 1.75rem; border-top:1px solid #E2E8F0; background:#F8FAFC; display:flex; justify-content:space-between; align-items:center;">
-            <div style="font-size:0.75rem; color:#64748B; font-style:italic;">Read-only order summary details</div>
+            <div style="display:flex; gap:0.6rem; align-items:center;">
+                <button type="button" id="ovm-print-receipt-btn" class="btn btn-outline btn-sm" style="font-weight:700; color:#FF6702; border-color:#FF6702; background:#ffffff; display:inline-flex; align-items:center; gap:5px; border-radius:var(--radius-md);">
+                    <span>🖨️</span> Print Tax Receipt
+                </button>
+            </div>
             <button type="button" onclick="closeOrderViewModal()" class="btn btn-primary" style="background:#2563EB; border:none; padding:0.5rem 1.4rem; font-weight:800; border-radius:9999px; cursor:pointer;">
                 Close
             </button>
@@ -1704,6 +1711,13 @@ function openOrderViewModal(orderId) {
     document.getElementById('ovm-items-tbody').innerHTML = '<tr><td colspan="5" style="text-align:center; padding:1.5rem; color:#64748B;">Loading items...</td></tr>';
     
     modal.classList.add('active');
+
+    const printBtn = document.getElementById('ovm-print-receipt-btn');
+    if (printBtn) {
+        printBtn.onclick = () => {
+            window.open('<?= BASE_URL ?>/admin/create_order.php?print_receipt=' + orderId, '_blank', 'width=800,height=900');
+        };
+    }
 
     fetch('<?= BASE_URL ?>/admin/orders.php?ajax_order_details=' + orderId)
         .then(res => res.json())
