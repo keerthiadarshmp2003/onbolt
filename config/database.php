@@ -25,11 +25,20 @@ if ($dbUrl) {
     }
 }
 
-$rawHost = getenv('DB_HOST') ?: ($parsedHost ?: '127.0.0.1');
-$rawPort = getenv('DB_PORT') ?: ($parsedPort ?: (strpos($rawHost, 'aivencloud.com') !== false ? '18911' : '3306'));
-$rawName = getenv('DB_NAME') ?: ($parsedName ?: (strpos($rawHost, 'aivencloud.com') !== false ? 'defaultdb' : 'onbolt_management'));
-$rawUser = getenv('DB_USER') ?: ($parsedUser ?: (strpos($rawHost, 'aivencloud.com') !== false ? 'avnadmin' : 'root'));
-$rawPass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : ($parsedPass ?? '');
+$isCpanel = (isset($_SERVER['HTTP_HOST']) && strpos($_SERVER['HTTP_HOST'], 'store.onboltlive.com') !== false) || is_dir('/home/ghfer22df43gf12');
+if ($isCpanel) {
+    $rawHost = getenv('DB_HOST') ?: 'localhost';
+    $rawPort = getenv('DB_PORT') ?: '3306';
+    $rawName = getenv('DB_NAME') ?: 'ghfer22df43gf12_onbolt';
+    $rawUser = getenv('DB_USER') ?: 'ghfer22df43gf12_onbolt_usr';
+    $rawPass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : 'OnBoltLive#2026!Db';
+} else {
+    $rawHost = getenv('DB_HOST') ?: ($parsedHost ?: '127.0.0.1');
+    $rawPort = getenv('DB_PORT') ?: ($parsedPort ?: (strpos($rawHost, 'aivencloud.com') !== false ? '18911' : '3306'));
+    $rawName = getenv('DB_NAME') ?: ($parsedName ?: (strpos($rawHost, 'aivencloud.com') !== false ? 'defaultdb' : 'onbolt_management'));
+    $rawUser = getenv('DB_USER') ?: ($parsedUser ?: (strpos($rawHost, 'aivencloud.com') !== false ? 'avnadmin' : 'root'));
+    $rawPass = getenv('DB_PASS') !== false ? getenv('DB_PASS') : ($parsedPass ?? '');
+}
 
 define('DB_HOST', $rawHost);
 define('DB_PORT', $rawPort);

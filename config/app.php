@@ -32,11 +32,11 @@ if (getenv('APP_URL')) {
         $isHttps = true;
     } elseif (!empty($_SERVER['HTTP_X_FORWARDED_SSL']) && $_SERVER['HTTP_X_FORWARDED_SSL'] === 'on') {
         $isHttps = true;
-    } elseif (!empty($_SERVER['HTTP_HOST']) && (strpos($_SERVER['HTTP_HOST'], 'railway.app') !== false || strpos($_SERVER['HTTP_HOST'], 'vercel.app') !== false)) {
+    } elseif (!empty($_SERVER['SERVER_PORT']) && (int)$_SERVER['SERVER_PORT'] === 443) {
         $isHttps = true;
     }
     $protocol = $isHttps ? "https://" : "http://";
-    $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
+    $host = $_SERVER['HTTP_HOST'] ?? 'store.onboltlive.com';
 
     // Normalize root path: only use /onbolt when on localhost XAMPP
     $requestUri = $_SERVER['REQUEST_URI'] ?? '';
