@@ -3,6 +3,14 @@
  * OnBolt Digital Platform - Vercel Serverless Master Router
  */
 
+if (isset($_GET['test'])) {
+    header('Content-Type: text/plain');
+    echo "HELLO ONBOLT - PHP RUNTIME IS WORKING!\n";
+    echo "PHP Version: " . PHP_VERSION . "\n";
+    echo "Loaded Extensions: " . implode(', ', get_loaded_extensions()) . "\n";
+    exit;
+}
+
 // Enable detailed error output so any issues are immediately visible in browser
 ini_set('display_errors', '1');
 ini_set('display_startup_errors', '1');
