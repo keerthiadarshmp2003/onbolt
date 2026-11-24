@@ -3,6 +3,11 @@
  * OnBolt Digital Platform - Vercel Serverless Master Router
  */
 
+// Enable detailed error output so any issues are immediately visible in browser
+ini_set('display_errors', '1');
+ini_set('display_startup_errors', '1');
+error_reporting(E_ALL);
+
 // Enable temporary session directory for serverless environments
 if (is_dir('/tmp') && is_writable('/tmp')) {
     @session_save_path('/tmp');
