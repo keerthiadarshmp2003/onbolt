@@ -437,6 +437,7 @@ require_once __DIR__ . '/../includes/header.php';
     grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
     gap: 1.75rem;
     margin-bottom: 3.5rem;
+    align-items: start;
   }
 
   .product-order-card {
@@ -448,6 +449,8 @@ require_once __DIR__ . '/../includes/header.php';
     display: flex;
     flex-direction: column;
     position: relative;
+    height: fit-content;
+    align-self: start;
   }
 
   .product-order-card:hover {
@@ -1156,6 +1159,7 @@ require_once __DIR__ . '/../includes/header.php';
     .products-order-grid {
       grid-template-columns: 1fr !important;
       gap: 1.25rem !important;
+      align-items: start !important;
     }
     .uniform-group-banner {
       flex-direction: column;
