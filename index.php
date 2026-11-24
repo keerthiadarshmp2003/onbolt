@@ -1,13 +1,9 @@
 <?php
 /**
- * OnBolt Digital Platform - Store Root Entry
- * Directly routes to Schools Uniforms & Kits Ordering Portal
+ * OnBolt Digital Experience Platform - Storefront Root
+ * Directly renders the Schools Uniforms & Kits Portal at https://store.onboltlive.com/
  */
 
 declare(strict_types=1);
 
-require_once __DIR__ . '/config/app.php';
-
-// Directly redirect root visits to the Schools ordering portal
-header('Location: ' . BASE_URL . '/schools/', true, 302);
-exit;
+require_once __DIR__ . '/schools/index.php';
