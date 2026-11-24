@@ -23,9 +23,11 @@ $protocol = (!empty($_SERVER['HTTPS']) && $_SERVER['HTTPS'] !== 'off') ? "https:
 $host = $_SERVER['HTTP_HOST'] ?? 'localhost';
 $scriptDir = str_replace('\\', '/', dirname($_SERVER['SCRIPT_NAME'] ?? ''));
 
-// Normalize root path for onbolt
+// Normalize root path for onbolt and Vercel serverless
 if (strpos($scriptDir, '/onbolt') !== false) {
     $basePath = substr($scriptDir, 0, strpos($scriptDir, '/onbolt') + 7);
+} elseif ($scriptDir === '/api' || $scriptDir === '\\api') {
+    $basePath = '';
 } else {
     $basePath = rtrim($scriptDir, '/');
 }
