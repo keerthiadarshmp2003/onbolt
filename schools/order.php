@@ -1734,7 +1734,8 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="order-meta-header">
                     <div>
                         <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--wizard-muted); display: block;">Requisition Reference</span>
-                        <span class="order-id-badge" id="review-order-id"><?= sanitize($schoolOrderCode) ?>000000</span>
+                        <span class="order-id-badge" id="review-order-id" style="font-size: 0.78rem; font-weight: 700; background: #FFF7ED; color: #EA580C; border: 1px dashed #FDBA74; padding: 4px 10px; border-radius: 6px; letter-spacing: normal;">Generated on Payment Success</span>
+                        <span style="font-size: 0.7rem; color: #94A3B8; display: block; margin-top: 3px;">Unique Order ID for tracking will be issued upon successful payment</span>
                     </div>
                     <div style="text-align: right;">
                         <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--wizard-muted); display: block;">Requisition Date</span>
@@ -2186,7 +2187,7 @@ require_once __DIR__ . '/../includes/header.php';
             pincode: "",
             districtState: ""
         },
-        orderId: '<?= sanitize($schoolOrderCode) ?>' + Math.floor(100000 + Math.random() * 900000),
+        orderId: null,
         orderDate: new Date().toLocaleDateString('en-GB', { day: '2-digit', month: 'short', year: 'numeric' })
     };
 
@@ -2361,8 +2362,7 @@ require_once __DIR__ . '/../includes/header.php';
         if (el && el.dataset.code) {
             const cleanCode = el.dataset.code.replace(/[^A-Za-z0-9]/g, '').toUpperCase();
             if (cleanCode) {
-                const numPart = state.orderId.replace(/^[A-Za-z]+/, '') || Math.floor(100000 + Math.random() * 900000);
-                state.orderId = cleanCode + numPart;
+                state.schoolCode = cleanCode;
             }
         }
     }
@@ -2740,7 +2740,23 @@ require_once __DIR__ . '/../includes/header.php';
 
     // Step 4: Populate Verification
     function populateStepFourVerification() {
-        document.getElementById('review-order-id').textContent = state.orderId;
+        const reviewOrderIdEl = document.getElementById('review-order-id');
+        if (reviewOrderIdEl) {
+            if (state.orderId) {
+                reviewOrderIdEl.textContent = state.orderId;
+                reviewOrderIdEl.style.background = '#DCFCE7';
+                reviewOrderIdEl.style.color = '#15803D';
+                reviewOrderIdEl.style.border = '1px solid #86EFAC';
+            } else {
+                reviewOrderIdEl.textContent = 'Generated on Payment Success';
+                reviewOrderIdEl.style.background = '#FFF7ED';
+                reviewOrderIdEl.style.color = '#EA580C';
+                reviewOrderIdEl.style.border = '1px dashed #FDBA74';
+                reviewOrderIdEl.style.fontSize = '0.78rem';
+                reviewOrderIdEl.style.fontWeight = '700';
+                reviewOrderIdEl.style.letterSpacing = 'normal';
+            }
+        }
         document.getElementById('review-order-date').textContent = state.orderDate;
 
         document.getElementById('review-school-name').textContent = state.selectedCategory.name;
@@ -3012,7 +3028,7 @@ require_once __DIR__ . '/../includes/header.php';
         doc.setTextColor(30, 37, 48);
         doc.setFontSize(10);
         doc.setFont('helvetica', 'bold');
-        doc.text('Requisition ID: ' + state.orderId, 14, 42);
+        doc.text('Requisition ID: ' + (state.orderId || 'Issued upon payment confirmation'), 14, 42);
         doc.setFont('helvetica', 'normal');
         doc.text('Date: ' + state.orderDate, 14, 48);
         doc.text('School: ' + state.selectedCategory.name, 14, 54);
@@ -3090,13 +3106,13 @@ require_once __DIR__ . '/../includes/header.php';
         doc.text('Official Requisition issued by OnBolt Consumer India Desk.', 14, finalY);
         doc.text('Support: +91 88486 70739 / +91 99469 25888 | Email: onboltconsumerindia@gmail.com', 14, finalY + 5);
 
-        doc.save('OnBolt-Order-' + state.orderId + '.pdf');
+        doc.save('OnBolt-Uniform-Requisition.pdf');
     }
 
     // Submit and Send via WhatsApp
     async function submitAndSendWhatsApp() {
         const orderPayload = {
-            order_reference: state.orderId,
+            order_reference: null,
             school_id: state.selectedCategory.id,
             parent_name: state.parentDetails.parentName,
             student_name: state.parentDetails.studentName,
@@ -3130,7 +3146,7 @@ require_once __DIR__ . '/../includes/header.php';
 
         const msgText = 
 `*NEW UNIFORM ORDER*
-*Order ID:* ${state.orderId}
+*Order ID:* ${state.orderId || 'Issued upon payment confirmation'}
 *Date:* ${state.orderDate}
 *School:* ${state.selectedCategory.name}
 
@@ -3181,7 +3197,7 @@ Please confirm this order. Thank you!`;
 
         if (modalPayAmt) modalPayAmt.textContent = formattedAmt;
         if (modalBtnAmt) modalBtnAmt.textContent = formattedAmt;
-        if (modalMeta) modalMeta.textContent = 'Order Ref: ' + state.orderId + ' (' + totalQty + ' Items)';
+        if (modalMeta) modalMeta.textContent = (state.orderId ? 'Order Ref: ' + state.orderId + ' • ' : '') + totalQty + ' Uniform Item' + (totalQty > 1 ? 's' : '') + ' • Secure Gateway Payment';
 
         const modal = document.getElementById('portal-payment-modal');
         if (modal) {
@@ -3266,7 +3282,7 @@ Please confirm this order. Thank you!`;
         btn.innerHTML = '<span>🔒 Connecting to Secure Payment Gateway...</span>';
 
         const payload = {
-            order_reference: state.orderId,
+            order_reference: null,
             school_id: state.selectedCategory.id,
             parent_name: state.parentDetails.parentName || 'Parent Guardian',
             student_name: state.parentDetails.studentName || 'Student',
