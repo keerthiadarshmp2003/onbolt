@@ -184,14 +184,13 @@ try {
         $redirectUrl = $collectRes['collect_request_url'];
         $gatewayResponse = json_encode($collectRes['raw'] ?? ['status' => 'collect_request_created']);
     } else {
-        // Fallback if merchant test keys are being provisioned on dev-vanilla or network issue
-        $transactionRef = 'EDV-PENDING-' . strtoupper(bin2hex(random_bytes(4)));
-        $redirectUrl = BASE_URL . "/schools/payment_callback.php?order=" . urlencode($orderRef) . "&simulated=1";
-        $gatewayResponse = json_encode([
-            'status' => 'initiated',
-            'gateway_note' => $collectRes['error'] ?? 'Connecting to gateway sandbox',
-            'raw' => $collectRes['raw'] ?? null
+        // Rollback and return exact Edviron gateway error
+        $pdo->rollBack();
+        echo json_encode([
+            'success' => false,
+            'error'   => $collectRes['error'] ?? 'Unable to initiate Edviron payment session. Please check merchant gateway configuration.'
         ]);
+        exit;
     }
 
     // Insert Payment Record

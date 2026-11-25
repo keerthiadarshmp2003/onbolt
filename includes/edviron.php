@@ -81,32 +81,24 @@ function edviron_create_collect_request(array $orderData): array {
         ];
     }
 
-    // Sign payload with PG key: { amount, callback_url, school_id }
+    // Sign payload with PG key: { school_id, amount, callback_url }
     $signPayload = [
-        'amount'       => (string)(int)$orderData['amount'],
+        'school_id'    => $cfg['school_id'],
+        'amount'       => (string)$amount,
         'callback_url' => $callbackUrl
     ];
-    if (!empty($cfg['school_id'])) {
-        $signPayload['school_id'] = $cfg['school_id'];
-    }
     $sign = edviron_generate_jwt($signPayload, $cfg['pg_key']);
 
     $postData = [
+        'school_id'        => $cfg['school_id'],
         'amount'           => (string)$amount,
         'callback_url'     => $callbackUrl,
         'sign'             => $sign,
         'student_id'       => (string)($orderData['student_id'] ?? $orderRef),
         'student_name'     => (string)($orderData['student_name'] ?? 'Student'),
         'student_email'    => (string)($orderData['student_email'] ?? 'parent@onbolt.in'),
-        'student_phone_no' => (string)($orderData['student_phone_no'] ?? '9876543210'),
-        'receipt'          => $orderRef,
-        'custom_order_id'  => $orderRef,
-        'req_webhook_urls' => [$cfg['webhook_url']]
+        'student_phone_no' => (string)($orderData['student_phone_no'] ?? '9876543210')
     ];
-
-    if (!empty($cfg['school_id'])) {
-        $postData['school_id'] = $cfg['school_id'];
-    }
 
     if (!empty($orderData['additional_data']) && is_array($orderData['additional_data'])) {
         $postData['additional_data'] = $orderData['additional_data'];
@@ -139,41 +131,29 @@ function edviron_create_collect_request(array $orderData): array {
     }
 
     $res = json_decode($rawResponse, true);
+    $collectUrl = $res['collect_request_url'] ?? ($res['Collect_request_url'] ?? '');
+    $collectId  = $res['collect_request_id'] ?? ($res['Collect_request_id'] ?? '');
 
-    if ($httpCode >= 200 && $httpCode < 300 && !empty($res['collect_request_url'])) {
+    if ($httpCode >= 200 && $httpCode < 300 && !empty($collectUrl)) {
         return [
             'success'             => true,
-            'collect_request_id'  => $res['collect_request_id'] ?? '',
-            'collect_request_url' => $res['collect_request_url'],
+            'collect_request_id'  => $collectId,
+            'collect_request_url' => $collectUrl,
             'sign'                => $res['sign'] ?? null,
             'raw'                 => $res,
             'error'               => null
         ];
     }
 
-    // In dev / testing mode, if external gateway returns 401 (e.g. bearer token pending), provide seamless test gateway redirect
-    if ($cfg['env'] === 'dev' && ($httpCode === 401 || empty($cfg['api_token']))) {
-        $simCollectId = 'EDV-TEST-' . strtoupper(bin2hex(random_bytes(4)));
-        return [
-            'success'             => true,
-            'collect_request_id'  => $simCollectId,
-            'collect_request_url' => BASE_URL . "/schools/payment_callback.php?order=" . urlencode($orderRef) . "&status=SUCCESS&collect_id=" . urlencode($simCollectId),
-            'sign'                => $sign,
-            'raw'                 => [
-                'gateway_flow' => 'edviron_test_sandbox',
-                'notice'       => 'Test mode with Pg Key & School ID active. Set EDVIRON_API_TOKEN in production.',
-                'status'       => 'initiated',
-                'collect_id'   => $simCollectId
-            ],
-            'error'               => null
-        ];
+    $errMsg = $res['message'] ?? ($res['error'] ?? "Payment gateway error (HTTP {$httpCode})");
+    if ($httpCode === 401) {
+        $errMsg = "Edviron API Authentication Failed: " . ($res['message'] ?? 'Bearer token missing or invalid') . ". Please verify EDVIRON_API_TOKEN in config/edviron.php.";
     }
 
-    $errMsg = $res['message'] ?? ($res['error'] ?? "Payment gateway error (HTTP {$httpCode})");
     return [
-        'success' => false,
-        'error'   => $errMsg,
-        'raw'     => $res ?: $rawResponse,
+        'success'   => false,
+        'error'     => $errMsg,
+        'raw'       => $res ?: $rawResponse,
         'http_code' => $httpCode
     ];
 }

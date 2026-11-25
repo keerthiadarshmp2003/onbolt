@@ -10,13 +10,13 @@
 declare(strict_types=1);
 
 if (!defined('EDVIRON_ENV')) {
-    define('EDVIRON_ENV', getenv('EDVIRON_ENV') ?: 'dev'); // 'dev' or 'production'
+    define('EDVIRON_ENV', getenv('EDVIRON_ENV') ?: 'production'); // 'production' (live mode) or 'dev'
 }
 
 define('EDVIRON_DEV_BASE_URL', 'https://dev-vanilla.edviron.com');
 define('EDVIRON_PROD_BASE_URL', 'https://vanilla.edviron.com');
 
-// Default Provided Test Keys
+// Default Provided Live Keys
 if (!defined('EDVIRON_DEFAULT_PG_KEY')) {
     define('EDVIRON_DEFAULT_PG_KEY', getenv('EDVIRON_PG_KEY') ?: 'b8f2c9e4a1d7053c6f9e2a7d4b0c18f5e3a9d6c4b2f1e7085a9c3d6e2f4b1a79');
 }

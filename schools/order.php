@@ -1834,7 +1834,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </button>
 
                 <div style="display: flex; gap: 1rem; align-items: center; flex-wrap: wrap;">
-                    <button type="button" class="btn-pay-now" id="verify-pay-btn" onclick="openPaymentModal()">
+                    <button type="button" class="btn-pay-now" id="verify-pay-btn" onclick="executeGatewayPayment()">
                         <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
                             <rect x="2" y="5" width="20" height="14" rx="2"></rect>
                             <line x1="2" y1="10" x2="22" y2="10"></line>
@@ -3256,19 +3256,14 @@ Please confirm this order. Thank you!`;
             return;
         }
 
-        let finalMethod = currentPayMethod;
-        const upiInput = document.getElementById('custom-upi-id');
-        const activeTab = document.querySelector('.pay-tab-btn.active');
-        if (activeTab && activeTab.id === 'tab-btn-upi' && upiInput && upiInput.value.trim()) {
-            finalMethod = 'UPI (' + upiInput.value.trim() + ')';
-        }
+        let finalMethod = 'Edviron Payment Gateway';
 
-        const btn = document.getElementById('btn-submit-gateway-pay');
+        const btn = document.getElementById('verify-pay-btn') || document.getElementById('btn-submit-gateway-pay');
         if (!btn) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span>🔒 Initializing Edviron Gateway...</span>';
+        btn.innerHTML = '<span>🔒 Connecting to Edviron Gateway...</span>';
 
         const payload = {
             order_reference: state.orderId,
@@ -3297,21 +3292,23 @@ Please confirm this order. Thank you!`;
             const result = await res.json();
 
             if (result && result.success && result.redirect_url) {
-                btn.innerHTML = '<span>✓ Redirecting to Secure Gateway...</span>';
+                btn.innerHTML = '<span>✓ Redirecting to Edviron Gateway...</span>';
                 btn.style.background = '#15803D';
                 setTimeout(() => {
                     window.location.href = result.redirect_url;
-                }, 400);
+                }, 300);
             } else {
-                showPortalAlert('Gateway connection issue: ' + (result.error || 'Please try again.'), 'Payment Gateway Error', 'error');
+                showPortalAlert(result.error || 'Payment gateway connection error.', 'Payment Gateway', 'error');
                 btn.disabled = false;
                 btn.innerHTML = originalText;
+                btn.style.background = '';
             }
         } catch (e) {
             console.error('Payment Error:', e);
             showPortalAlert('Unable to reach payment gateway. Please check your network and try again.', 'Gateway Error', 'error');
             btn.disabled = false;
             btn.innerHTML = originalText;
+            btn.style.background = '';
         }
     }
 
