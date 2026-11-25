@@ -77,35 +77,36 @@ function clearFastCache(): void {
 // School functions
 function getSchoolBySlug(string $slug): ?array {
     static $reqCache = [];
-    $aliases = [
-        'school-b' => 'gps-brookes',
-        'global-public-school-brookes' => 'gps-brookes',
-        'school-c' => 'global-public-school-cbse',
-        'gps-cbse' => 'global-public-school-cbse',
-        'school-d' => 'gps-international',
-        'global-public-school-international' => 'gps-international'
-    ];
-    if (isset($aliases[$slug])) {
-        $slug = $aliases[$slug];
-    }
-    if (isset($reqCache[$slug])) {
-        return $reqCache[$slug];
+    $slugClean = trim(strtolower($slug));
+    if (isset($reqCache[$slugClean])) {
+        return $reqCache[$slugClean];
     }
 
-    $cacheKey = 'school_slug_' . $slug;
+    $cacheKey = 'school_slug_' . $slugClean;
     $cached = getFastCache($cacheKey, 120);
     if ($cached !== null) {
-        $reqCache[$slug] = $cached ?: null;
-        return $reqCache[$slug];
+        $reqCache[$slugClean] = $cached ?: null;
+        return $reqCache[$slugClean];
+    }
+
+    // Support all slug variants bidirectionally so either slug always resolves to the right school
+    $candidates = [$slugClean];
+    if (in_array($slugClean, ['gps-brookes', 'global-public-school-brookes', 'school-b'])) {
+        $candidates = ['global-public-school-brookes', 'gps-brookes', 'school-b'];
+    } elseif (in_array($slugClean, ['global-public-school-cbse', 'gps-cbse', 'school-c'])) {
+        $candidates = ['global-public-school-cbse', 'gps-cbse', 'school-c'];
+    } elseif (in_array($slugClean, ['global-public-school-international', 'gps-international', 'school-d'])) {
+        $candidates = ['global-public-school-international', 'gps-international', 'school-d'];
     }
 
     $pdo = getDbConnection();
-    $stmt = $pdo->prepare("SELECT * FROM schools WHERE slug = ? AND status = 1 LIMIT 1");
-    $stmt->execute([$slug]);
+    $inClause = implode(',', array_fill(0, count($candidates), '?'));
+    $stmt = $pdo->prepare("SELECT * FROM schools WHERE slug IN ($inClause) AND status = 1 ORDER BY (slug = ?) DESC, id ASC LIMIT 1");
+    $stmt->execute(array_merge($candidates, [$slugClean]));
     $school = $stmt->fetch();
     $res = $school ?: null;
     setFastCache($cacheKey, $res ?: false, 120);
-    $reqCache[$slug] = $res;
+    $reqCache[$slugClean] = $res;
     return $res;
 }
 

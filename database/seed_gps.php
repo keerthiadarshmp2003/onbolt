@@ -14,11 +14,11 @@ echo "Date: " . date('Y-m-d H:i:s') . "\n";
 echo "Host: " . DB_HOST . " | Database: " . DB_NAME . "\n";
 echo "=================================================================\n\n";
 
-// 1. Ensure Schools 16, 17, 18 exist and are configured
+// 1. Ensure Schools 16, 17, 18 and parent School 20 exist and are configured
 $schools = [
     16 => [
         'name' => 'GPS Brookes - Trivandrum (IB)',
-        'slug' => 'gps-brookes',
+        'slug' => 'global-public-school-brookes',
         'code' => 'GIB',
         'location' => 'Trivandrum',
         'city' => 'Trivandrum',
@@ -40,7 +40,7 @@ $schools = [
     ],
     18 => [
         'name' => 'GPS International - Trivandrum (CAIE)',
-        'slug' => 'gps-international',
+        'slug' => 'global-public-school-international',
         'code' => 'GCA',
         'location' => 'Trivandrum',
         'city' => 'Trivandrum',
@@ -51,7 +51,10 @@ $schools = [
     ]
 ];
 
-$upSchoolStmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, location = ?, city = ?, description = ?, logo = ?, applicable_classes = ?, parent_id = ?, ordering_enabled = 1, enable_class_selection = 0, uniform_mode = 'common' WHERE id = ?");
+$pdo->prepare("UPDATE schools SET name = 'Global Public School', slug = 'global-public-school', has_sub_schools = 1, sub_school_label = 'Stream', parent_id = NULL WHERE id = 20")->execute();
+echo "[✓] Configured Main Group School ID 20: Global Public School (has_sub_schools=1, sub_school_label=Stream)\n";
+
+$upSchoolStmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, location = ?, city = ?, description = ?, logo = ?, applicable_classes = ?, parent_id = ?, has_sub_schools = 0, ordering_enabled = 1, enable_class_selection = 0, uniform_mode = 'common' WHERE id = ?");
 
 foreach ($schools as $id => $s) {
     $upSchoolStmt->execute([
