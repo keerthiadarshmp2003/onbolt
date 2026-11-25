@@ -224,6 +224,19 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
         <a href="<?= BASE_URL ?>/admin/orders.php" class="admin-nav-item <?= ($adminActive ?? '') === 'orders' ? 'active' : '' ?>">
             <span>📦</span> Parent Purchases &amp; Messages
         </a>
+        <?php
+        $headerPdo = getDbConnection();
+        $navPendingCount = 0;
+        try {
+            $navPendingCount = (int)$headerPdo->query("SELECT COUNT(*) FROM orders WHERE (order_reference IS NULL OR order_reference = '') AND payment_status IN ('Pending', 'Failed')")->fetchColumn();
+        } catch (Throwable $e) {}
+        ?>
+        <a href="<?= BASE_URL ?>/admin/pending_transactions.php" class="admin-nav-item <?= ($adminActive ?? '') === 'pending_transactions' ? 'active' : '' ?>">
+            <span>⏳</span> Pending &amp; Failed Attempts
+            <?php if ($navPendingCount > 0): ?>
+                <span style="margin-left: auto; background: #EF4444; color: #ffffff; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 9999px; line-height: 1.2;"><?= $navPendingCount ?></span>
+            <?php endif; ?>
+        </a>
         <a href="<?= BASE_URL ?>/admin/create_order.php" class="admin-nav-item <?= ($adminActive ?? '') === 'create_order' ? 'active' : '' ?>">
             <span>🛍️</span> Create Walk-in Order
         </a>

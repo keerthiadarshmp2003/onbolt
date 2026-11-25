@@ -99,17 +99,17 @@ try {
 
     $orderStatus = 'Pending';
 
+    // 1. Insert order with NULL order_reference - Order ID is ONLY generated upon confirmed SUCCESS!
     $stmt = $pdo->prepare("INSERT INTO orders (
-        order_reference, school_id, parent_id, parent_name, student_name, gender, grade_class,
+        order_reference, payment_request_id, school_id, parent_id, parent_name, student_name, gender, grade_class,
         mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
         subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
         order_status, admin_notes, created_at
-    ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
+    ) VALUES (NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
 
     $adminNotes = "State/District: {$stateDist}. Initiated via online uniform ordering portal. Gateway: {$paymentMethod}.";
 
     $stmt->execute([
-        $orderRef,
         $schoolId,
         $parentId,
         $parentName,
@@ -132,6 +132,10 @@ try {
     ]);
 
     $orderId = (int)$pdo->lastInsertId();
+
+    // 2. Generate unique sequential payment request ID (e.g. REQ-000045)
+    $paymentRequestId = 'REQ-' . str_pad((string)$orderId, 6, '0', STR_PAD_LEFT);
+    $pdo->prepare("UPDATE orders SET payment_request_id = ? WHERE id = ?")->execute([$paymentRequestId, $orderId]);
 
     $itemStmt = $pdo->prepare("INSERT INTO order_items (
         order_id, product_id, product_name, size, color, quantity, unit_price, total_price
@@ -158,15 +162,15 @@ try {
         ]);
     }
 
-    // Build explicit callback URL with order reference and school ID
-    $callbackUrl = BASE_URL . '/schools/payment_callback.php?order=' . urlencode($orderRef) . '&school_id=' . urlencode((string)$schoolId);
+    // Build explicit callback URL with unique sequential request ID and school ID
+    $callbackUrl = BASE_URL . '/schools/payment_callback.php?request_id=' . urlencode($paymentRequestId) . '&school_id=' . urlencode((string)$schoolId);
 
-    // Call Edviron Payment Gateway API to create Collect Request
+    // Call Edviron Payment Gateway API with sequential Request ID (Order ID generated ONLY after Success)
     $collectRes = edviron_create_collect_request([
         'amount'           => $totalAmount,
-        'order_reference'  => $orderRef,
-        'order_id'         => $orderRef,
-        'custom_order_id'  => $orderRef,
+        'order_reference'  => $paymentRequestId,
+        'order_id'         => $paymentRequestId,
+        'custom_order_id'  => $paymentRequestId,
         'callback_url'     => $callbackUrl,
         'student_id'       => '-',
         'student_name'     => $studentName,
@@ -221,21 +225,23 @@ try {
     // Admin notification
     $notifStmt = $pdo->prepare("INSERT INTO notifications (title, message, type, link, created_at) VALUES (?, ?, 'order', ?, NOW())");
     $notifStmt->execute([
-        "New Order Initiated: {$orderRef}",
-        "Order for {$studentName} ({$gradeClass}) received. Payment Pending (Rs. {$totalAmount}) via {$paymentMethod}",
-        "orders.php?search=" . urlencode($orderRef)
+        "New Payment Request: {$paymentRequestId}",
+        "Order requisition for {$studentName} ({$gradeClass}) initiated. Payment Pending (Rs. {$totalAmount}) via {$paymentMethod}",
+        "pending_transactions.php?search=" . urlencode($mobile)
     ]);
 
     $pdo->commit();
 
-    // Persist order details in session as a fallback for return redirect
-    $_SESSION['last_order_reference'] = $orderRef;
+    // Persist request details in session as a fallback for return redirect
+    $_SESSION['last_payment_request_id'] = $paymentRequestId;
     $_SESSION['last_order_id'] = $orderId;
+    unset($_SESSION['last_order_reference']);
 
     ob_clean();
     echo json_encode([
         'success'             => true,
-        'order_reference'     => $orderRef,
+        'payment_request_id'  => $paymentRequestId,
+        'order_reference'     => null,
         'order_id'            => $orderId,
         'collect_request_id'  => $collectRequestId,
         'redirect_url'        => $redirectUrl,

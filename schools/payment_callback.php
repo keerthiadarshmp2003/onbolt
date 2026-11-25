@@ -24,6 +24,8 @@ $collectId = trim((string)(
 ));
 
 $customOrder = trim((string)(
+    $_REQUEST['request_id'] ??
+    $_REQUEST['payment_request_id'] ??
     $_REQUEST['custom_order_id'] ?? 
     $_REQUEST['order'] ?? 
     $_REQUEST['order_ref'] ?? 
@@ -58,7 +60,10 @@ if (empty($customOrder) && !empty($_REQUEST['additional_data'])) {
     }
 }
 
-// Fallback to active session order reference
+// Fallback to active session request/order reference
+if (empty($customOrder) && !empty($_SESSION['last_payment_request_id'])) {
+    $customOrder = trim((string)$_SESSION['last_payment_request_id']);
+}
 if (empty($customOrder) && !empty($_SESSION['last_order_reference'])) {
     $customOrder = trim((string)$_SESSION['last_order_reference']);
 }
@@ -67,11 +72,11 @@ $gatewaySchoolId = trim((string)($_REQUEST['school_id'] ?? ''));
 $status = strtoupper(trim((string)($_REQUEST['status'] ?? '')));
 $isSimulated = !empty($_REQUEST['simulated']);
 
-// Find order by order reference or custom order ID
+// Find order by payment_request_id or order_reference
 $order = null;
 if (!empty($customOrder)) {
-    $stmt = $pdo->prepare("SELECT * FROM orders WHERE order_reference = ? LIMIT 1");
-    $stmt->execute([$customOrder]);
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE payment_request_id = ? OR order_reference = ? LIMIT 1");
+    $stmt->execute([$customOrder, $customOrder]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
@@ -126,14 +131,24 @@ if (!$order) {
 
 $orderId = (int)$order['id'];
 $orderRef = $order['order_reference'];
+$paymentRequestId = $order['payment_request_id'] ?? ('REQ-' . str_pad((string)$orderId, 6, '0', STR_PAD_LEFT));
 $schoolId = (int)$order['school_id'];
-$_SESSION['last_order_reference'] = $orderRef;
+$_SESSION['last_payment_request_id'] = $paymentRequestId;
 $_SESSION['last_order_id'] = $orderId;
 
 // If status not explicitly passed from gateway, verify with Edviron Check Status API
 $gatewayData = null;
 if (!empty($collectId)) {
     $statusCheck = edviron_get_status_by_collect_id($collectId, $gatewaySchoolId ?: (string)$schoolId);
+    if ($statusCheck['success'] && !empty($statusCheck['data'])) {
+        $gatewayData = $statusCheck['data'];
+        $gatewayStatus = strtoupper($gatewayData['status'] ?? ($gatewayData['details']['order_status'] ?? ($gatewayData['order_status'] ?? '')));
+        if (!empty($gatewayStatus)) {
+            $status = $gatewayStatus;
+        }
+    }
+} elseif (!empty($paymentRequestId)) {
+    $statusCheck = edviron_get_status_by_custom_order($paymentRequestId, $gatewaySchoolId ?: (string)$schoolId);
     if ($statusCheck['success'] && !empty($statusCheck['data'])) {
         $gatewayData = $statusCheck['data'];
         $gatewayStatus = strtoupper($gatewayData['status'] ?? ($gatewayData['details']['order_status'] ?? ($gatewayData['order_status'] ?? '')));
@@ -162,6 +177,14 @@ $isFailed = in_array($status, ['FAILED', 'FAILURE', 'USER_DROPPED', 'CANCELLED']
 
 if ($isSuccess) {
     // Payment Succeeded!
+    // Generate official Order ID / Reference ONLY after payment status is confirmed SUCCESS!
+    $officialOrderRef = $order['order_reference'];
+    if (empty($officialOrderRef)) {
+        $officialOrderRef = generateOfficialOrderReference($schoolId);
+    }
+    $order['order_reference'] = $officialOrderRef;
+    $_SESSION['last_order_reference'] = $officialOrderRef;
+
     $bankRef = $gatewayData['details']['bank_ref'] ?? ($gatewayData['bank_reference'] ?? ($collectId ?: 'TXN-' . strtoupper(bin2hex(random_bytes(4)))));
     if (empty($bankRef)) {
         $bankRef = 'TXN-' . strtoupper(bin2hex(random_bytes(4)));
@@ -170,8 +193,8 @@ if ($isSuccess) {
 
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$officialOrderRef, $orderId]);
 
         $upPay = $pdo->prepare("UPDATE payments SET status = 'Completed', transaction_ref = ?, payment_method = ?, gateway_response = ?, created_at = NOW() WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $upPay->execute([
@@ -184,7 +207,7 @@ if ($isSuccess) {
         $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, 'Pending', 'Confirmed', ?, 'Payment Gateway', NOW())");
         $histStmt->execute([
             $orderId,
-            "Payment verified successfully via Edviron Gateway (Ref: {$bankRef}). Order status set to Confirmed."
+            "Payment verified successfully via Edviron Gateway (Bank Ref: {$bankRef}). Official Order ID {$officialOrderRef} generated."
         ]);
 
         $pdo->commit();
@@ -195,10 +218,10 @@ if ($isSuccess) {
     }
 
     // Redirect to official receipt & invoice page
-    header("Location: " . BASE_URL . "/schools/payment-success.php?order=" . urlencode($orderRef));
+    header("Location: " . BASE_URL . "/schools/payment-success.php?order=" . urlencode($officialOrderRef));
     exit;
 } elseif ($isFailed) {
-    // Payment Failed or User Cancelled
+    // Payment Failed or User Cancelled - Keep Order ID NULL!
     $pdo->beginTransaction();
     try {
         $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', updated_at = NOW() WHERE id = ?");
@@ -240,7 +263,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <h1 style="font-size: 1.6rem; font-weight: 800; color: #1E2530; margin-bottom: 0.5rem;">Payment Not Completed</h1>
                 <p style="color: #64748B; font-size: 0.92rem; line-height: 1.5; margin-bottom: 1.75rem;">
-                    The transaction was cancelled or could not be processed by your bank/UPI provider. Your uniform requisition is saved under reference <strong><?= sanitize($orderRef) ?></strong>.
+                    The transaction was cancelled or could not be processed by your bank/UPI provider. Your uniform requisition is saved under Request ID <strong><?= sanitize($paymentRequestId) ?></strong>.
                 </p>
             <?php else: ?>
                 <div style="width: 72px; height: 72px; border-radius: 50%; background: #FFF7ED; color: #FF6702; display: inline-flex; align-items: center; justify-content: center; font-size: 2.2rem; margin-bottom: 1.25rem; box-shadow: 0 0 0 8px rgba(255, 103, 2, 0.08);">
@@ -254,8 +277,8 @@ require_once __DIR__ . '/../includes/header.php';
 
             <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 14px; padding: 1rem 1.25rem; margin-bottom: 2rem; text-align: left; font-size: 0.9rem;">
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <span style="color:#64748B;">Order Reference:</span>
-                    <strong style="color:#1E2530;"><?= sanitize($orderRef) ?></strong>
+                    <span style="color:#64748B;">Payment Request ID:</span>
+                    <strong style="color:#1E2530;"><?= sanitize($paymentRequestId) ?></strong>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
                     <span style="color:#64748B;">Student:</span>
@@ -272,7 +295,7 @@ require_once __DIR__ . '/../includes/header.php';
                     ↻ Retry Requisition
                 </a>
                 
-                <a href="https://api.whatsapp.com/send/?phone=918848670739&text=<?= urlencode("Hello OnBolt Desk, my uniform payment for Order {$orderRef} had an issue. Please assist.") ?>" target="_blank" class="btn btn-outline" style="padding: 0.85rem; font-weight: 700; border-radius: 9999px;">
+                <a href="https://api.whatsapp.com/send/?phone=918848670739&text=<?= urlencode("Hello OnBolt Desk, my uniform payment for Request {$paymentRequestId} had an issue. Please assist.") ?>" target="_blank" class="btn btn-outline" style="padding: 0.85rem; font-weight: 700; border-radius: 9999px;">
                     💬 Contact Support Desk on WhatsApp
                 </a>
             </div>

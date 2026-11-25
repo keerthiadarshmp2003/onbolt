@@ -62,22 +62,15 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
             try {
                 $pdo->beginTransaction();
 
-                // Unique Order Reference in (schoolcode)number format
-                $schoolCode = 'TIS';
-                if (!empty($school['code'])) {
-                    $schoolCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $school['code']));
-                }
-                $orderRef = $schoolCode . rand(100000, 999999);
-
+                // Insert order with NULL order_reference (Generated ONLY after confirmed payment SUCCESS)
                 $stmt = $pdo->prepare("INSERT INTO orders (
-                    order_reference, school_id, parent_id, parent_name, student_name, grade_class,
+                    order_reference, payment_request_id, school_id, parent_id, parent_name, student_name, grade_class,
                     mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
                     subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
                     order_status, admin_notes, created_at
-                ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Kerala', ?, ?, ?, 0.00, ?, 'Pending', ?, 'Pending', 'Placed through unified school ordering portal', NOW())");
+                ) VALUES (NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Kerala', ?, ?, ?, 0.00, ?, 'Pending', ?, 'Pending', 'Placed through unified school ordering portal', NOW())");
 
                 $stmt->execute([
-                    $orderRef,
                     $school['id'],
                     $parent['id'],
                     $parentName,
@@ -96,6 +89,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 ]);
 
                 $orderId = (int)$pdo->lastInsertId();
+
+                // Generate unique sequential payment request ID (e.g. REQ-000045)
+                $paymentRequestId = 'REQ-' . str_pad((string)$orderId, 6, '0', STR_PAD_LEFT);
+                $pdo->prepare("UPDATE orders SET payment_request_id = ? WHERE id = ?")->execute([$paymentRequestId, $orderId]);
 
                 // Insert Order Items
                 $itemStmt = $pdo->prepare("INSERT INTO order_items (
@@ -116,20 +113,31 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ]);
                 }
 
+                // Insert Payment Record
+                $payStmt = $pdo->prepare("INSERT INTO payments (
+                    order_id, transaction_ref, payment_method, amount, currency, status, created_at
+                ) VALUES (?, ?, ?, ?, 'INR', 'Pending', NOW())");
+                $payStmt->execute([
+                    $orderId,
+                    $paymentRequestId,
+                    $paymentMethod,
+                    $cartTotals['total']
+                ]);
+
                 // Insert History
-                $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, NULL, 'Pending', 'Order requisition logged successfully', 'Parent', NOW())");
-                $histStmt->execute([$orderId]);
+                $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, NULL, 'Pending', ?, 'Parent', NOW())");
+                $histStmt->execute([$orderId, "Payment Request {$paymentRequestId} logged. Awaiting payment confirmation."]);
 
                 // Create Notification for Admins
                 $notifStmt = $pdo->prepare("INSERT INTO notifications (title, message, type, link, created_at) VALUES (?, ?, 'order', ?, NOW())");
                 $notifStmt->execute([
-                    "New Order Requisition: {$orderRef}",
-                    "{$parentName} placed order for {$selectedStudentName} ({$selectedGradeClass}) at {$school['name']}. Total: " . formatCurrency($cartTotals['total']),
-                    "orders.php?search=" . urlencode($orderRef)
+                    "New Payment Request: {$paymentRequestId}",
+                    "{$parentName} placed order requisition for {$selectedStudentName} ({$selectedGradeClass}) at {$school['name']}. Total: " . formatCurrency($cartTotals['total']),
+                    "pending_transactions.php?search=" . urlencode($mobile)
                 ]);
 
                 // Log Activity
-                logActivity('place_order', 'orders', (int)$parent['id'], 'parent', "Order {$orderRef} placed for {$school['name']}");
+                logActivity('place_order', 'orders', (int)$parent['id'], 'parent', "Payment Request {$paymentRequestId} placed for {$school['name']}");
 
                 // Commit Transaction
                 $pdo->commit();
@@ -137,14 +145,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                 // Clear the Cart
                 clearCart((int)$school['id']);
 
+                $_SESSION['last_payment_request_id'] = $paymentRequestId;
+                $_SESSION['last_order_id'] = $orderId;
+                unset($_SESSION['last_order_reference']);
+
                 // If Online Gateway chosen, redirect to Edviron Payment Gateway
                 if (strpos($paymentMethod, 'Online') !== false || strpos($paymentMethod, 'Gateway') !== false || strpos($paymentMethod, 'UPI') !== false) {
                     require_once __DIR__ . '/../includes/edviron.php';
+                    $callbackUrl = BASE_URL . '/schools/payment_callback.php?request_id=' . urlencode($paymentRequestId) . '&school_id=' . urlencode((string)$school['id']);
                     $collectRes = edviron_create_collect_request([
                         'amount'           => $cartTotals['total'],
-                        'order_reference'  => $orderRef,
-                        'order_id'         => $orderRef,
-                        'custom_order_id'  => $orderRef,
+                        'order_reference'  => $paymentRequestId,
+                        'order_id'         => $paymentRequestId,
+                        'custom_order_id'  => $paymentRequestId,
+                        'callback_url'     => $callbackUrl,
                         'student_id'       => '-',
                         'student_name'     => $selectedStudentName,
                         'student_email'    => $email,
@@ -163,8 +177,8 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     }
                 }
 
-                // Redirect to Order History with success status
-                header("Location: " . BASE_URL . "/schools/{$schoolSlug}/orders/?ref={$orderRef}&placed=1");
+                // If offline / counter payment, redirect to status lookup
+                header("Location: " . BASE_URL . "/schools/payment_callback.php?request_id=" . urlencode($paymentRequestId) . "&status=PENDING");
                 exit;
 
             } catch (Exception $e) {

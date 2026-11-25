@@ -394,3 +394,32 @@ function generateSchoolSlug(PDO $pdo, string $name, ?int $ignoreId = null): stri
     }
     return $slug;
 }
+
+/**
+ * Generate official unique Order ID / Reference for a school upon confirmed payment success
+ * Format: (SchoolCode) + 6-digit random number (e.g. GIB822754, TIS140127)
+ */
+function generateOfficialOrderReference(int $schoolId): string {
+    $pdo = getDbConnection();
+    $schoolCode = 'OB';
+    if ($schoolId > 0) {
+        $stmt = $pdo->prepare("SELECT s.code, p.code as parent_code FROM schools s LEFT JOIN schools p ON s.parent_id = p.id WHERE s.id = ?");
+        $stmt->execute([$schoolId]);
+        $row = $stmt->fetch(PDO::FETCH_ASSOC);
+        if ($row) {
+            $rawC = !empty($row['code']) ? $row['code'] : (!empty($row['parent_code']) ? $row['parent_code'] : 'TIS');
+            $cleanC = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', (string)$rawC));
+            if (!empty($cleanC)) {
+                $schoolCode = $cleanC;
+            }
+        }
+    }
+
+    $chkStmt = $pdo->prepare("SELECT id FROM orders WHERE order_reference = ? LIMIT 1");
+    do {
+        $candidate = $schoolCode . rand(100000, 999999);
+        $chkStmt->execute([$candidate]);
+    } while ($chkStmt->fetch());
+
+    return $candidate;
+}

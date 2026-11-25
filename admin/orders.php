@@ -378,7 +378,7 @@ $search = trim($_GET['search'] ?? '');
 $sql = "SELECT o.*, s.name as school_name 
         FROM orders o 
         LEFT JOIN schools s ON o.school_id = s.id 
-        WHERE 1=1";
+        WHERE (o.order_reference IS NOT NULL AND o.order_reference != '')";
 
 if (!empty($statusFilter)) {
     if (in_array($statusFilter, ['Cancelled', 'Cancel'])) {
@@ -405,8 +405,8 @@ if (!empty($search)) {
 $sql .= " ORDER BY o.id DESC";
 $ordersList = $pdo->query($sql)->fetchAll();
 
-// Dynamic KPI Metrics (computed based on current sorting/filtering)
-$scopeCond = "";
+// Dynamic KPI Metrics (computed based on current sorting/filtering for confirmed orders)
+$scopeCond = " AND (o.order_reference IS NOT NULL AND o.order_reference != '')";
 if ($subSchoolFilter > 0) {
     $scopeCond .= " AND o.school_id = {$subSchoolFilter}";
 } elseif ($schoolFilter > 0) {

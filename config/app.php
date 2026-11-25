@@ -78,6 +78,10 @@ function verifyCsrfToken(?string $token): bool {
     return hash_equals($_SESSION['csrf_token'], $token);
 }
 
+function csrfField(): string {
+    return '<input type="hidden" name="csrf_token" value="' . htmlspecialchars(generateCsrfToken()) . '">';
+}
+
 // XSS Sanitizer
 function sanitize(mixed $data): mixed {
     if (is_array($data)) {

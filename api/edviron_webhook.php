@@ -49,11 +49,11 @@ $payMethod   = trim((string)($data['payment_method'] ?? ($data['details']['payme
 
 $pdo = getDbConnection();
 
-// Find order
+// Find order by payment_request_id or order_reference
 $order = null;
 if (!empty($customOrder)) {
-    $stmt = $pdo->prepare("SELECT * FROM orders WHERE order_reference = ? LIMIT 1");
-    $stmt->execute([$customOrder]);
+    $stmt = $pdo->prepare("SELECT * FROM orders WHERE payment_request_id = ? OR order_reference = ? LIMIT 1");
+    $stmt->execute([$customOrder, $customOrder]);
     $order = $stmt->fetch(PDO::FETCH_ASSOC);
 }
 
@@ -78,10 +78,14 @@ $orderId = (int)$order['id'];
 $orderRef = $order['order_reference'];
 
 if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
+    if (empty($orderRef)) {
+        $orderRef = generateOfficialOrderReference((int)$order['school_id']);
+    }
+
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$orderRef, $orderId]);
 
         $upPay = $pdo->prepare("UPDATE payments SET status = 'Completed', transaction_ref = ?, payment_method = ?, gateway_response = ?, created_at = NOW() WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $upPay->execute([
@@ -95,7 +99,7 @@ if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
         $histStmt->execute([
             $orderId,
             $order['order_status'],
-            "Payment verified via Edviron Webhook. Status: {$status}. Bank Ref: {$bankRef}"
+            "Payment verified via Edviron Webhook. Status: {$status}. Bank Ref: {$bankRef}. Official Order ID: {$orderRef}"
         ]);
 
         $pdo->commit();
@@ -104,6 +108,7 @@ if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
         error_log("Webhook DB error: " . $e->getMessage());
     }
 } elseif (in_array($status, ['FAILED', 'FAILURE', 'USER_DROPPED'])) {
+    // Keep order_reference = NULL
     $pdo->beginTransaction();
     try {
         $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', updated_at = NOW() WHERE id = ?");
