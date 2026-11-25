@@ -106,7 +106,7 @@ try {
         mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
         subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
         order_status, admin_notes, created_at
-    ) VALUES (NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
+    ) VALUES (NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
 
     $adminNotes = "State/District: {$stateDist}. Initiated via online uniform ordering portal. Transaction Mode: {$paymentMethod}.";
 
