@@ -1062,7 +1062,7 @@ require_once __DIR__ . '/header.php';
                         <div style="font-weight:800; color:var(--brand-dark); margin-bottom:0.4rem; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Payment &amp; Delivery</div>
                         <div style="margin-bottom:0.25rem;"><strong>Address:</strong> <?= sanitize($selectedOrder['delivery_address']) ?></div>
                         <div style="margin-bottom:0.25rem;"><strong>Pincode:</strong> <?= sanitize($selectedOrder['pincode']) ?> (<?= sanitize($selectedOrder['state']) ?>)</div>
-                        <div style="margin-bottom:0.25rem;"><strong>Transaction Mode:</strong> <?= sanitize(str_replace('Transaction Mode: ', '', (string)$selectedOrder['payment_method'])) ?></div>
+                        <div style="margin-bottom:0.25rem;"><strong>Payment Method:</strong> <?= sanitize(formatDisplayPaymentMethod($selectedOrder['payment_method'])) ?></div>
                         <div style="margin-bottom:0.25rem;"><strong>Payment Status:</strong> <?= $selectedOrder['payment_status'] === 'Paid' ? '<span style="color:#15803d; font-weight:800; background:#dcfce7; padding:0.15rem 0.55rem; border-radius:9999px;">✓ PAID</span>' : '<span style="font-weight:700; color:var(--brand-primary);">' . sanitize($selectedOrder['payment_status']) . '</span>' ?></div>
                         <?php $selectedTxnId = !empty($selectedOrder['gateway_transaction_id']) ? $selectedOrder['gateway_transaction_id'] : (!empty($selectedPayment['transaction_ref']) ? $selectedPayment['transaction_ref'] : '—'); ?>
                         <div><strong>Gateway Transaction ID:</strong> <code style="font-weight:700; color:#0284C7; background:#EFF6FF; padding:2px 8px; border-radius:4px; font-size:0.85rem;"><?= sanitize($selectedTxnId) ?></code></div>
@@ -1302,8 +1302,8 @@ require_once __DIR__ . '/header.php';
                             <?php else: ?>
                                 <span style="background:#FEF3C7; color:#B45309; font-weight:800; font-size:0.7rem; padding:0.18rem 0.5rem; border-radius:9999px; display:inline-block;">Pending</span>
                             <?php endif; ?>
-                            <div style="font-size:0.67rem; font-weight:700; color:#475569; margin-top:3px; max-width:145px; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($o['payment_method']) ?>">
-                                <?= htmlspecialchars(str_replace('Transaction Mode: ', '', (string)$o['payment_method'])) ?>
+                            <div style="font-size:0.67rem; font-weight:700; color:#475569; margin-top:3px; max-width:145px; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars(formatDisplayPaymentMethod($o['payment_method'])) ?>">
+                                <?= htmlspecialchars(formatDisplayPaymentMethod($o['payment_method'])) ?>
                             </div>
                             <?php 
                             $orderTxnId = !empty($o['gateway_transaction_id']) ? $o['gateway_transaction_id'] : ($o['payment_txn_ref'] ?? '');
@@ -1587,7 +1587,7 @@ require_once __DIR__ . '/header.php';
             <!-- Payment & Order Status Row -->
             <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF7ED; border:1px solid #FFEDD5; border-radius:12px; padding:0.85rem 1.25rem; margin-bottom:1.25rem; font-size:0.85rem;">
                 <div>
-                    <div><strong>Transaction Mode:</strong> <span id="ovm-payment-method"></span> &bull; <strong>Status:</strong> <span id="ovm-payment-status"></span></div>
+                    <div><strong>Payment Method:</strong> <span id="ovm-payment-method"></span> &bull; <strong>Status:</strong> <span id="ovm-payment-status"></span></div>
                     <div style="margin-top:0.35rem;"><strong>Gateway Transaction ID:</strong> <span id="ovm-txn-id" style="font-family:monospace; font-weight:700; color:#0284C7; background:#EFF6FF; padding:2px 7px; border-radius:4px;"></span></div>
                 </div>
                 <div style="font-size:1.1rem; font-weight:800; color:#FF6702;">
@@ -1760,7 +1760,9 @@ function openOrderViewModal(orderId) {
                 document.getElementById('ovm-parent-name').textContent = o.parent_name || 'N/A';
                 document.getElementById('ovm-phone').textContent = o.mobile || 'N/A';
                 document.getElementById('ovm-address').textContent = (o.delivery_address || 'Not specified') + (o.pincode ? ' - ' + o.pincode : '');
-                document.getElementById('ovm-payment-method').textContent = (o.payment_method || 'Online / QR / UPI / Card').replace('Transaction Mode: ', '');
+                let rawMethod = (o.payment_method || 'UPI').replace('Transaction Mode: ', '');
+                if (rawMethod.toLowerCase().includes('online / qr') || rawMethod.toLowerCase().includes('edviron')) rawMethod = 'UPI';
+                document.getElementById('ovm-payment-method').textContent = rawMethod;
                 document.getElementById('ovm-payment-status').innerHTML = o.payment_status === 'Paid' 
                     ? '<span style="color:#15803d; font-weight:800; background:#dcfce7; padding:2px 8px; border-radius:9999px;">✓ PAID</span>' 
                     : '<span style="color:#b45309; font-weight:800; background:#fef3c7; padding:2px 8px; border-radius:9999px;">Pending</span>';

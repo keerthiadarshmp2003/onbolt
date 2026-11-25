@@ -423,3 +423,51 @@ function generateOfficialOrderReference(int $schoolId): string {
 
     return $candidate;
 }
+
+/**
+ * Resolves a clean, specific payment method for UI display.
+ * Shows only how the payment was done/attempted (e.g. 'UPI', 'UPI (Google Pay)', 'Card', 'Net Banking', 'Cash').
+ * Eliminates generic multi-slash strings like 'Online / QR / UPI / Card'.
+ */
+function formatDisplayPaymentMethod(?string $method, ?string $gatewayResponse = null): string {
+    $raw = trim((string)$method);
+    $raw = str_ireplace('Transaction Mode: ', '', $raw);
+
+    // If gatewayResponse JSON has specific mode, check that first
+    if (!empty($gatewayResponse)) {
+        $gw = json_decode($gatewayResponse, true);
+        if (is_array($gw)) {
+            $pm = strtolower((string)($gw['details']['payment_mode'] ?? ($gw['payment_mode'] ?? '')));
+            if ($pm === 'upi') return 'UPI';
+            if (str_contains($pm, 'card')) return 'Card';
+            if (str_contains($pm, 'net')) return 'Net Banking';
+            if (str_contains($pm, 'wallet')) return 'Wallet';
+        }
+    }
+
+    if (empty($raw) || stripos($raw, 'Online / QR / UPI / Card') !== false || stripos($raw, 'edviron') !== false) {
+        return 'UPI';
+    }
+
+    if (stripos($raw, 'cash') !== false || stripos($raw, 'counter') !== false) {
+        return 'Cash';
+    }
+    if (stripos($raw, 'qr') !== false) {
+        return 'UPI';
+    }
+    if (stripos($raw, 'card') !== false) {
+        return 'Card';
+    }
+    if (stripos($raw, 'net') !== false || stripos($raw, 'bank') !== false) {
+        return 'Net Banking';
+    }
+    if (stripos($raw, 'wallet') !== false) {
+        return 'Wallet';
+    }
+    if (stripos($raw, 'upi') !== false) {
+        return $raw; // e.g. 'UPI (Google Pay)' or 'UPI'
+    }
+
+    return $raw ?: 'UPI';
+}
+

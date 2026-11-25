@@ -190,7 +190,13 @@ if ($isSuccess) {
         $bankRef = 'TXN-' . strtoupper(bin2hex(random_bytes(6)));
     }
     $rawMode = $gatewayData['details']['payment_mode'] ?? ($gatewayData['payment_mode'] ?? ($gatewayData['payment_method'] ?? ''));
-    $cleanMode = !empty($rawMode) && stripos((string)$rawMode, 'edviron') === false ? 'Online / QR / UPI / Card (' . ucfirst((string)$rawMode) . ')' : 'Online / QR / UPI / Card';
+    $cleanMode = formatDisplayPaymentMethod($rawMode, json_encode($gatewayData));
+    if (empty($cleanMode) || $cleanMode === 'UPI') {
+        $existingMethod = trim((string)($order['payment_method'] ?? ''));
+        if (!empty($existingMethod) && stripos($existingMethod, 'Online / QR') === false) {
+            $cleanMode = formatDisplayPaymentMethod($existingMethod);
+        }
+    }
 
     $pdo->beginTransaction();
     try {
@@ -292,8 +298,8 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <?php endif; ?>
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
-                    <span style="color:#64748B;">Transaction Mode:</span>
-                    <strong style="color:#1E2530;">Online / QR / UPI / Card</strong>
+                    <span style="color:#64748B;">Payment Method:</span>
+                    <strong style="color:#1E2530;"><?= sanitize(formatDisplayPaymentMethod($order['payment_method'] ?? 'UPI')) ?></strong>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
                     <span style="color:#64748B;">Student:</span>

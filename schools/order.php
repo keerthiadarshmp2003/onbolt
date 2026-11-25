@@ -1975,7 +1975,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <span style="font-size:1.35rem;">🔒</span>
                 <div>
                     <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">Online Payment Gateway</h3>
-                    <span style="font-size: 0.75rem; color: #94A3B8;">Transaction Mode: Online / QR / UPI / Card</span>
+                    <span style="font-size: 0.75rem; color: #94A3B8;">Secure 256-Bit SSL Payment Gateway</span>
                 </div>
             </div>
             <button type="button" onclick="closePaymentModal()" style="background: none; border: none; color: #94A3B8; font-size: 1.8rem; cursor: pointer; line-height: 1;">&times;</button>
@@ -2149,7 +2149,7 @@ require_once __DIR__ . '/../includes/header.php';
             </button>
 
             <div style="text-align: center; margin-top: 0.85rem; font-size: 0.75rem; color: #64748B; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                <span>🔒 256-Bit SSL Secured &bull; Transaction Mode: Online / QR / UPI / Card</span>
+                <span>🔒 256-Bit SSL Secured &bull; Instant Payment Verification</span>
             </div>
 
         </div>
@@ -3256,7 +3256,7 @@ Please confirm this order. Thank you!`;
             return;
         }
 
-        let finalMethod = 'Transaction Mode: Online / QR / UPI / Card';
+        let finalMethod = (typeof currentPayMethod !== 'undefined' && currentPayMethod) ? currentPayMethod : 'UPI';
 
         const btn = document.getElementById('verify-pay-btn') || document.getElementById('btn-submit-gateway-pay');
         if (!btn) return;

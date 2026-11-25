@@ -47,8 +47,8 @@ $pStmt->execute([$orderId]);
 $payment = $pStmt->fetch(PDO::FETCH_ASSOC);
 
 $txnRef = !empty($order['gateway_transaction_id']) ? $order['gateway_transaction_id'] : (!empty($payment['transaction_ref']) ? $payment['transaction_ref'] : ('TXN-' . strtoupper(substr(md5((string)$order['id']), 0, 8))));
-$rawPayMethod = !empty($payment['payment_method']) ? $payment['payment_method'] : (!empty($order['payment_method']) ? $order['payment_method'] : 'Transaction Mode: Online / QR / UPI / Card');
-$payMethod = str_ireplace('edviron', 'Online', str_replace('Transaction Mode: ', '', $rawPayMethod));
+$rawPayMethod = !empty($payment['payment_method']) ? $payment['payment_method'] : (!empty($order['payment_method']) ? $order['payment_method'] : 'UPI');
+$payMethod = formatDisplayPaymentMethod($rawPayMethod, $payment['gateway_response'] ?? null);
 $payStatus = $order['payment_status'] ?? 'Paid';
 $orderDate = date('d M Y, h:i A', strtotime($order['created_at']));
 

@@ -91,12 +91,8 @@ try {
     }
     $totalAmount = $subtotal;
     $paymentStatus = 'Pending';
-    $rawPayMethod = trim((string)($data['payment_method'] ?? 'Online / QR / UPI / Card'));
-    if (stripos($rawPayMethod, 'edviron') !== false || empty($rawPayMethod)) {
-        $paymentMethod = 'Online / QR / UPI / Card';
-    } else {
-        $paymentMethod = $rawPayMethod;
-    }
+    $rawPayMethod = trim((string)($data['payment_method'] ?? 'UPI'));
+    $paymentMethod = formatDisplayPaymentMethod($rawPayMethod);
     $transactionRef = 'PENDING-' . strtoupper(bin2hex(random_bytes(4)));
 
     $pdo = getDbConnection();

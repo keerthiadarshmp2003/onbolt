@@ -77,7 +77,13 @@ if (!$order) {
 $orderId = (int)$order['id'];
 $orderRef = $order['order_reference'];
 $txnId = !empty($bankRef) ? $bankRef : ($collectId ?: 'TXN-' . strtoupper(bin2hex(random_bytes(6))));
-$cleanMode = !empty($payMethod) && stripos($payMethod, 'edviron') === false ? 'Online / QR / UPI / Card (' . ucfirst($payMethod) . ')' : 'Online / QR / UPI / Card';
+$cleanMode = formatDisplayPaymentMethod($payMethod, $rawBody);
+if (empty($cleanMode) || $cleanMode === 'UPI') {
+    $existingMethod = trim((string)($order['payment_method'] ?? ''));
+    if (!empty($existingMethod) && stripos($existingMethod, 'Online / QR') === false) {
+        $cleanMode = formatDisplayPaymentMethod($existingMethod);
+    }
+}
 
 if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
     if (empty($orderRef)) {

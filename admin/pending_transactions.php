@@ -460,8 +460,8 @@ require_once __DIR__ . '/header.php';
                         <div style="font-weight: 800; color: #1E2530; font-size: 0.95rem;">
                             <?= formatCurrency((float)$row['total_amount']) ?>
                         </div>
-                        <div style="font-size: 0.7rem; color: #94A3B8;">
-                            <?= htmlspecialchars($row['payment_method'] ?? 'Online') ?>
+                        <div style="font-size: 0.72rem; font-weight: 600; color: #64748B;">
+                            <?= htmlspecialchars(formatDisplayPaymentMethod($row['payment_method'], $row['gateway_response'] ?? null)) ?>
                         </div>
                     </td>
 
@@ -554,11 +554,11 @@ require_once __DIR__ . '/header.php';
                     Payment Method Received <span style="color: #DC2626;">*</span>
                 </label>
                 <select name="payment_method" required style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #ffffff;">
-                    <option value="Cash (Counter / School Desk)">💵 Cash (Counter / School Desk)</option>
-                    <option value="Direct UPI / QR Payment">📱 Direct UPI / QR Code Payment (Verified)</option>
-                    <option value="Bank Transfer / NEFT / IMPS">🏦 Bank Transfer / NEFT / IMPS</option>
-                    <option value="Card / POS Machine">💳 Card / POS Machine</option>
-                    <option value="Online / QR / UPI / Card (Verified)">⚡ Online / QR / UPI / Card (Verified Manually)</option>
+                    <option value="Cash">💵 Cash</option>
+                    <option value="UPI" selected>📱 UPI</option>
+                    <option value="Card">💳 Card</option>
+                    <option value="Net Banking">🏦 Net Banking</option>
+                    <option value="Online Gateway">⚡ Online Gateway</option>
                 </select>
             </div>
 

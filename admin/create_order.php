@@ -388,7 +388,7 @@ if (isset($_GET['print_receipt'])) {
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Payment Mode:</span>
-                        <span class="detail-val"><?= htmlspecialchars(str_replace('Transaction Mode: ', '', (string)$order['payment_method'])) ?></span>
+                        <span class="detail-val"><?= htmlspecialchars(formatDisplayPaymentMethod($order['payment_method'])) ?></span>
                     </div>
                     <?php if (!empty($order['gateway_transaction_id'])): ?>
                     <div class="detail-row">
