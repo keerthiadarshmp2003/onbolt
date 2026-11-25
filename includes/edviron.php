@@ -96,20 +96,46 @@ function edviron_create_collect_request(array $orderData): array {
     ];
     $sign = edviron_generate_jwt($signPayload, $cfg['pg_key']);
 
+    $customOrderId = (string)($orderData['custom_order_id'] ?? ($orderData['order_id'] ?? $orderRef));
+    $studentId = (string)($orderData['student_id'] ?? '-');
+    if ($studentId === '' || is_numeric($studentId)) {
+        $studentId = '-';
+    }
+
     $postData = [
         'school_id'        => $cfg['school_id'],
         'amount'           => (string)$amount,
         'callback_url'     => $callbackUrl,
         'sign'             => $sign,
-        'student_id'       => (string)($orderData['student_id'] ?? $orderRef),
+        'order_id'         => $customOrderId,
+        'custom_order_id'  => $customOrderId,
+        'student_id'       => $studentId,
         'student_name'     => (string)($orderData['student_name'] ?? 'Student'),
         'student_email'    => (string)($orderData['student_email'] ?? 'parent@onbolt.in'),
         'student_phone_no' => (string)($orderData['student_phone_no'] ?? '9876543210')
     ];
 
+    // Edviron transaction history column formatting:
+    // 'Grade Class' => Student grade/class (e.g. 12 (A))
+    // 'Order Ref'   => '-' (Order ID is displayed in primary 'Order ID' column)
+    // 'Parent Name' => Guardian name (e.g. MANIKANDAN V)
+    // 'School Id'   => '-'
+    $additional = [
+        'grade_class' => (string)($orderData['additional_data']['grade_class'] ?? ''),
+        'order_ref'   => '-',
+        'parent_name' => (string)($orderData['additional_data']['parent_name'] ?? ''),
+        'school_id'   => '-'
+    ];
     if (!empty($orderData['additional_data']) && is_array($orderData['additional_data'])) {
-        $postData['additional_data'] = $orderData['additional_data'];
+        foreach ($orderData['additional_data'] as $k => $v) {
+            if ($k === 'order_ref' || $k === 'school_id') {
+                $additional[$k] = '-';
+            } elseif (!isset($additional[$k])) {
+                $additional[$k] = $v;
+            }
+        }
     }
+    $postData['additional_data'] = $additional;
 
     $ch = curl_init($cfg['base_url'] . '/erp/create-collect-request');
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

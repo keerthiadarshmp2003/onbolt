@@ -143,14 +143,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     $collectRes = edviron_create_collect_request([
                         'amount'           => $cartTotals['total'],
                         'order_reference'  => $orderRef,
-                        'student_id'       => (string)$orderId,
+                        'order_id'         => $orderRef,
+                        'custom_order_id'  => $orderRef,
+                        'student_id'       => '-',
                         'student_name'     => $selectedStudentName,
                         'student_email'    => $email,
                         'student_phone_no' => $mobile,
                         'additional_data'  => [
                             'grade_class' => $selectedGradeClass,
+                            'order_ref'   => '-',
                             'parent_name' => $parentName,
-                            'school_id'   => $school['id']
+                            'school_id'   => '-'
                         ]
                     ], (int)$school['id']);
 

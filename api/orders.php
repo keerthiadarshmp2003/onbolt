@@ -165,16 +165,18 @@ try {
     $collectRes = edviron_create_collect_request([
         'amount'           => $totalAmount,
         'order_reference'  => $orderRef,
+        'order_id'         => $orderRef,
+        'custom_order_id'  => $orderRef,
         'callback_url'     => $callbackUrl,
-        'student_id'       => (string)$orderId,
+        'student_id'       => '-',
         'student_name'     => $studentName,
         'student_email'    => !empty($email) ? $email : 'parent@onbolt.in',
         'student_phone_no' => !empty($mobile) ? $mobile : '9876543210',
         'additional_data'  => [
-            'order_ref'    => $orderRef,
             'grade_class'  => $gradeClass,
+            'order_ref'    => '-',
             'parent_name'  => $parentName,
-            'school_id'    => $schoolId
+            'school_id'    => '-'
         ]
     ]);
 
