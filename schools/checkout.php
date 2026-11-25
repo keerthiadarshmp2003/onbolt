@@ -153,7 +153,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                             'grade_class' => $selectedGradeClass,
                             'order_ref'   => '-',
                             'parent_name' => $parentName,
-                            'school_id'   => '-'
+                            'school_id'   => !empty($school['code']) ? $school['code'] : 'TIS'
                         ]
                     ], (int)$school['id']);
 

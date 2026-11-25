@@ -176,7 +176,7 @@ try {
             'grade_class'  => $gradeClass,
             'order_ref'    => '-',
             'parent_name'  => $parentName,
-            'school_id'    => '-'
+            'school_id'    => $schoolCode
         ]
     ]);
 

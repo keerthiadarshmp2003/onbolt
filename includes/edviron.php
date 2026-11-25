@@ -119,17 +119,25 @@ function edviron_create_collect_request(array $orderData): array {
     // 'Grade Class' => Student grade/class (e.g. 12 (A))
     // 'Order Ref'   => '-' (Order ID is displayed in primary 'Order ID' column)
     // 'Parent Name' => Guardian name (e.g. MANIKANDAN V)
-    // 'School Id'   => '-'
+    // 'School Id'   => Institutional School Code (e.g. TIS, GIB, GCB)
+    $passedSchoolCode = trim((string)($orderData['additional_data']['school_id'] ?? ''));
+    if (empty($passedSchoolCode) || is_numeric($passedSchoolCode) || $passedSchoolCode === '-') {
+        $prefix = strtoupper(substr((string)$customOrderId, 0, 3));
+        $passedSchoolCode = (!empty($prefix) && ctype_alpha($prefix)) ? $prefix : 'TIS';
+    }
+
     $additional = [
         'grade_class' => (string)($orderData['additional_data']['grade_class'] ?? ''),
         'order_ref'   => '-',
         'parent_name' => (string)($orderData['additional_data']['parent_name'] ?? ''),
-        'school_id'   => '-'
+        'school_id'   => $passedSchoolCode
     ];
     if (!empty($orderData['additional_data']) && is_array($orderData['additional_data'])) {
         foreach ($orderData['additional_data'] as $k => $v) {
-            if ($k === 'order_ref' || $k === 'school_id') {
+            if ($k === 'order_ref') {
                 $additional[$k] = '-';
+            } elseif ($k === 'school_id') {
+                $additional[$k] = $passedSchoolCode;
             } elseif (!isset($additional[$k])) {
                 $additional[$k] = $v;
             }
