@@ -65,8 +65,15 @@ function edviron_create_collect_request(array $orderData): array {
     $cfg = getEdvironConfig();
 
     $amount = number_format((float)$orderData['amount'], 2, '.', '');
-    $callbackUrl = $orderData['callback_url'] ?? $cfg['callback_url'];
     $orderRef = $orderData['order_reference'] ?? ('OB-' . rand(100000, 999999));
+
+    // Ensure callback URL always contains order reference parameter
+    $baseCallback = $orderData['callback_url'] ?? $cfg['callback_url'];
+    if (!str_contains($baseCallback, 'order=')) {
+        $sep = str_contains($baseCallback, '?') ? '&' : '?';
+        $baseCallback .= "{$sep}order=" . urlencode($orderRef);
+    }
+    $callbackUrl = $baseCallback;
 
     // If external merchant API credentials are not set, proceed smoothly with the gateway flow
     if (empty($cfg['is_configured'])) {
@@ -161,7 +168,7 @@ function edviron_create_collect_request(array $orderData): array {
 /**
  * Check payment status by Edviron Collect Request ID
  */
-function edviron_get_status_by_collect_id(string $collectRequestId): array {
+function edviron_get_status_by_collect_id(string $collectRequestId, ?string $schoolId = null): array {
     $cfg = getEdvironConfig();
 
     if (empty($cfg['is_configured'])) {
@@ -173,12 +180,14 @@ function edviron_get_status_by_collect_id(string $collectRequestId): array {
         ];
     }
 
+    $sid = !empty($schoolId) ? $schoolId : $cfg['school_id'];
     $payload = [
+        'school_id'          => $sid,
         'collect_request_id' => $collectRequestId
     ];
     $sign = edviron_generate_jwt($payload, $cfg['pg_key']);
 
-    $url = $cfg['base_url'] . "/erp/collect-request/{$collectRequestId}?sign={$sign}";
+    $url = $cfg['base_url'] . "/erp/collect-request/{$collectRequestId}?school_id=" . urlencode((string)$sid) . "&sign={$sign}";
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);
@@ -204,7 +213,7 @@ function edviron_get_status_by_collect_id(string $collectRequestId): array {
 /**
  * Check payment status by OnBolt Custom Order ID
  */
-function edviron_get_status_by_custom_order(string $customOrderId): array {
+function edviron_get_status_by_custom_order(string $customOrderId, ?string $schoolId = null): array {
     $cfg = getEdvironConfig();
 
     if (empty($cfg['is_configured'])) {
@@ -216,12 +225,14 @@ function edviron_get_status_by_custom_order(string $customOrderId): array {
         ];
     }
 
+    $sid = !empty($schoolId) ? $schoolId : $cfg['school_id'];
     $payload = [
+        'school_id'       => $sid,
         'custom_order_id' => $customOrderId
     ];
     $sign = edviron_generate_jwt($payload, $cfg['pg_key']);
 
-    $url = $cfg['base_url'] . "/erp/collect-request-status/{$customOrderId}?sign={$sign}";
+    $url = $cfg['base_url'] . "/erp/collect-request-status/{$customOrderId}?school_id=" . urlencode((string)$sid) . "&sign={$sign}";
 
     $ch = curl_init($url);
     curl_setopt($ch, CURLOPT_RETURNTRANSFER, true);

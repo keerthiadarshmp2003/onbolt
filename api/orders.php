@@ -158,10 +158,14 @@ try {
         ]);
     }
 
+    // Build explicit callback URL with order reference and school ID
+    $callbackUrl = BASE_URL . '/schools/payment_callback.php?order=' . urlencode($orderRef) . '&school_id=' . urlencode((string)$schoolId);
+
     // Call Edviron Payment Gateway API to create Collect Request
     $collectRes = edviron_create_collect_request([
         'amount'           => $totalAmount,
         'order_reference'  => $orderRef,
+        'callback_url'     => $callbackUrl,
         'student_id'       => (string)$orderId,
         'student_name'     => $studentName,
         'student_email'    => !empty($email) ? $email : 'parent@onbolt.in',
@@ -221,6 +225,10 @@ try {
     ]);
 
     $pdo->commit();
+
+    // Persist order details in session as a fallback for return redirect
+    $_SESSION['last_order_reference'] = $orderRef;
+    $_SESSION['last_order_id'] = $orderId;
 
     ob_clean();
     echo json_encode([

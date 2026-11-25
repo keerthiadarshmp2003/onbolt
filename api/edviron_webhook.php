@@ -22,11 +22,30 @@ if (empty($data) || !is_array($data)) {
     exit;
 }
 
-$collectId   = trim((string)($data['collect_id'] ?? ($data['collect_request_id'] ?? '')));
-$customOrder = trim((string)($data['custom_order_id'] ?? ($data['receipt'] ?? '')));
-$status      = strtoupper(trim((string)($data['status'] ?? '')));
+$collectId   = trim((string)($data['EdvironCollectRequestId'] ?? ($data['collect_id'] ?? ($data['collect_request_id'] ?? ($data['collectRequestId'] ?? '')))));
+$customOrder = trim((string)($data['custom_order_id'] ?? ($data['order'] ?? ($data['order_ref'] ?? ($data['receipt'] ?? '')))));
+
+if (empty($customOrder) && !empty($data['additional_data'])) {
+    $rawAdd = $data['additional_data'];
+    if (is_string($rawAdd) && str_contains($rawAdd, '.')) {
+        $parts = explode('.', $rawAdd);
+        if (count($parts) >= 2) {
+            $payloadJson = base64_decode(str_replace(['-', '_'], ['+', '/'], $parts[1]));
+            $payloadData = json_decode($payloadJson, true);
+            if (!empty($payloadData['additional_data']['order_ref'])) {
+                $customOrder = trim((string)$payloadData['additional_data']['order_ref']);
+            } elseif (!empty($payloadData['order_ref'])) {
+                $customOrder = trim((string)$payloadData['order_ref']);
+            }
+        }
+    } elseif (is_array($rawAdd) && !empty($rawAdd['order_ref'])) {
+        $customOrder = trim((string)$rawAdd['order_ref']);
+    }
+}
+
+$status      = strtoupper(trim((string)($data['status'] ?? ($data['details']['order_status'] ?? ''))));
 $bankRef     = trim((string)($data['bank_reference'] ?? ($data['details']['bank_ref'] ?? '')));
-$payMethod   = trim((string)($data['payment_method'] ?? 'upi'));
+$payMethod   = trim((string)($data['payment_method'] ?? ($data['details']['payment_mode'] ?? 'upi')));
 
 $pdo = getDbConnection();
 
@@ -39,8 +58,8 @@ if (!empty($customOrder)) {
 }
 
 if (!$order && !empty($collectId)) {
-    $pStmt = $pdo->prepare("SELECT order_id FROM payments WHERE transaction_ref = ? ORDER BY id DESC LIMIT 1");
-    $pStmt->execute([$collectId]);
+    $pStmt = $pdo->prepare("SELECT order_id FROM payments WHERE transaction_ref = ? OR gateway_response LIKE ? ORDER BY id DESC LIMIT 1");
+    $pStmt->execute([$collectId, "%{$collectId}%"]);
     $pRow = $pStmt->fetch();
     if ($pRow) {
         $stmt = $pdo->prepare("SELECT * FROM orders WHERE id = ? LIMIT 1");

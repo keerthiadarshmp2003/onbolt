@@ -15,8 +15,12 @@ $pdo = getDbConnection();
 $orderRef = trim($_GET['order'] ?? '');
 
 if (empty($orderRef)) {
-    header("Location: " . BASE_URL . "/schools/");
-    exit;
+    if (!empty($_SESSION['last_order_reference'])) {
+        $orderRef = trim((string)$_SESSION['last_order_reference']);
+    } else {
+        header("Location: " . BASE_URL . "/schools/");
+        exit;
+    }
 }
 
 $stmt = $pdo->prepare("SELECT o.*, s.name as school_name, s.slug as school_slug, s.logo as school_logo, s.location as school_location, s.city as school_city 
@@ -733,6 +737,5 @@ document.addEventListener('keydown', (e) => {
         </div>
     </div>
 </div>
-</script>
 
 <?php require_once __DIR__ . '/../includes/footer.php'; ?>
