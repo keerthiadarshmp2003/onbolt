@@ -348,13 +348,12 @@ require_once __DIR__ . '/header.php';
                 <th style="min-width: 140px;">Items</th>
                 <th style="width: 110px; text-align: right;">Amount</th>
                 <th style="width: 130px; text-align: center;">Status</th>
-                <th style="width: 180px; text-align: right;">Actions</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($pendingList)): ?>
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
+                    <td colspan="7" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
                         <div style="font-size: 1.15rem; font-weight: 800; color: #1E2530;">No Incomplete Attempts Found</div>
                         <p style="font-size: 0.88rem; margin-top: 0.25rem;">
@@ -376,35 +375,22 @@ require_once __DIR__ . '/header.php';
                     $waUrl = "https://wa.me/{$phoneClean}?text=" . urlencode($waText);
                 ?>
                 <tr>
-                    <!-- Request ID & Date -->
+                    <!-- Request ID -->
                     <td>
                         <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: #475569; background: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-block;">
                             <?= htmlspecialchars($displayReqId) ?>
                         </span>
-                        <div style="font-size: 0.72rem; color: #94A3B8; margin-top: 4px;">
-                            <?= date('d M Y, h:i A', strtotime($row['created_at'])) ?>
-                        </div>
                     </td>
 
-                    <!-- Parent Details & WhatsApp Action -->
+                    <!-- Parent Details -->
                     <td>
                         <div style="font-weight: 800; color: #1E2530;">
                             <?= htmlspecialchars($row['parent_name'] ?: 'Not Specified') ?>
                         </div>
-                        <div style="display: flex; align-items: center; gap: 0.4rem; margin-top: 3px;">
+                        <div style="margin-top: 3px;">
                             <span style="font-weight: 700; color: #0284C7; font-size: 0.85rem;">
-                                📱 <?= htmlspecialchars($row['mobile']) ?>
+                                <?= htmlspecialchars($row['mobile']) ?>
                             </span>
-                            <?php if (!empty($phoneClean)): ?>
-                                <a href="<?= $waUrl ?>" target="_blank" title="Chat with Parent on WhatsApp" 
-                                   style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #25D366; color: #ffffff; border-radius: 50%; font-size: 0.7rem; text-decoration: none;">
-                                    💬
-                                </a>
-                                <a href="tel:<?= htmlspecialchars($row['mobile']) ?>" title="Call Parent" 
-                                   style="display: inline-flex; align-items: center; justify-content: center; width: 22px; height: 22px; background: #E0F2FE; color: #0284C7; border-radius: 50%; font-size: 0.7rem; text-decoration: none;">
-                                    📞
-                                </a>
-                            <?php endif; ?>
                         </div>
                         <?php if (!empty($row['email'])): ?>
                             <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">
@@ -440,18 +426,8 @@ require_once __DIR__ . '/header.php';
 
                     <!-- Items Summary -->
                     <td>
-                        <div style="font-size: 0.82rem; color: #1E2530; font-weight: 600;">
+                        <div style="font-size: 0.85rem; color: #1E2530; font-weight: 700;">
                             <?= count($items) ?> item<?= count($items) !== 1 ? 's' : '' ?>
-                        </div>
-                        <div style="font-size: 0.72rem; color: #64748B; max-width: 170px; overflow: hidden; text-overflow: ellipsis; white-space: nowrap;" title="<?php
-                            $names = array_map(function($i) { return $i['product_name'] . ' (' . $i['size'] . ') x' . $i['quantity']; }, $items);
-                            echo htmlspecialchars(implode(', ', $names));
-                        ?>">
-                            <?php
-                            $shortNames = array_map(function($i) { return $i['product_name'] . ' (' . $i['size'] . ')'; }, array_slice($items, 0, 2));
-                            echo htmlspecialchars(implode(', ', $shortNames));
-                            if (count($items) > 2) echo ' +' . (count($items) - 2) . ' more';
-                            ?>
                         </div>
                     </td>
 
@@ -483,23 +459,6 @@ require_once __DIR__ . '/header.php';
                                 Txn: <?= htmlspecialchars($displayTxnId) ?>
                             </div>
                         <?php endif; ?>
-                    </td>
-
-                    <!-- Action Buttons -->
-                    <td style="text-align: right; white-space: nowrap;">
-                        <button type="button" 
-                                class="btn-mark-paid"
-                                onclick="openMarkPaidModal(this)"
-                                data-order-id="<?= $orderId ?>"
-                                data-req-id="<?= htmlspecialchars($displayReqId) ?>"
-                                data-student="<?= htmlspecialchars($row['student_name']) ?>"
-                                data-parent="<?= htmlspecialchars($row['parent_name']) ?>"
-                                data-mobile="<?= htmlspecialchars($row['mobile']) ?>"
-                                data-school="<?= htmlspecialchars($row['school_name'] ?? '') ?>"
-                                data-amount="<?= formatCurrency((float)$row['total_amount']) ?>"
-                                style="background: #10B981; color: #ffffff; border: none; padding: 0.45rem 0.85rem; border-radius: 8px; font-size: 0.78rem; font-weight: 800; cursor: pointer; display: inline-flex; align-items: center; gap: 0.3rem;">
-                            <span>⚡</span> Mark as Paid
-                        </button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
