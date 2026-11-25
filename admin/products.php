@@ -20,12 +20,35 @@ if (!defined('MAX_IMAGE_BYTES')) {
     define('MAX_IMAGE_BYTES', 500 * 1024); // 500 KB strict limit
 }
 
-// Main schools list (only main schools: standalone single schools and multi-school groups)
-$mainSchools = $pdo->query("SELECT id, name, has_sub_schools FROM schools WHERE (parent_id IS NULL OR parent_id = 0) AND status = 1 ORDER BY name ASC")->fetchAll();
+// 1. Fetch all active schools
+$allActiveSchools = $pdo->query("SELECT id, name, slug, parent_id, has_sub_schools, sub_school_label, location, city, logo FROM schools WHERE status = 1 ORDER BY sort_order ASC, name ASC")->fetchAll(PDO::FETCH_ASSOC);
 
-// School selection (main school only)
+$mainSchools = [];
+$subSchoolsByParent = [];
+$schoolsById = [];
+
+foreach ($allActiveSchools as $s) {
+    $schoolsById[(int)$s['id']] = $s;
+    if (empty($s['parent_id'])) {
+        $mainSchools[] = $s;
+    } else {
+        $subSchoolsByParent[(int)$s['parent_id']][] = $s;
+    }
+}
+
+// 2. Resolve selected school & parent school
 $schoolFilter = (int)($_GET['school_id'] ?? 0);
-$selectedSchoolId = $schoolFilter > 0 ? $schoolFilter : (!empty($mainSchools) ? (int)$mainSchools[0]['id'] : 1);
+if ($schoolFilter > 0 && isset($schoolsById[$schoolFilter])) {
+    $selectedSchoolId = $schoolFilter;
+} else {
+    $selectedSchoolId = !empty($mainSchools) ? (int)$mainSchools[0]['id'] : 1;
+}
+
+$currentSchool = $schoolsById[$selectedSchoolId] ?? reset($schoolsById);
+$isSubSchool = !empty($currentSchool['parent_id']);
+$parentSchoolId = $isSubSchool ? (int)$currentSchool['parent_id'] : (int)$currentSchool['id'];
+$parentSchool = $schoolsById[$parentSchoolId] ?? $currentSchool;
+$availableSubSchools = $subSchoolsByParent[$parentSchoolId] ?? [];
 
 // Fetch categories
 $categories = $pdo->query("SELECT * FROM product_categories ORDER BY sort_order ASC")->fetchAll();
@@ -82,23 +105,30 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
 
                 if ($action === 'create') {
-                    $defImage = $imagePath ?: '';
+                    $defImage = $imagePath ? ltrim($imagePath, '/\\') : '';
                     $stmt = $pdo->prepare("INSERT INTO products (category_id, name, slug, sku, description, short_description, price, actual_price, vendor_commission, vendor_price, is_kit, featured_image, available_sizes, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 1, NOW())");
                     $stmt->execute([$categoryId, $name, $slug, $sku, $description, $shortDesc, $price, $actualPrice, $vendorCommission, $actualPrice, $isKit, $defImage, $sizes]);
                     $newProdId = (int)$pdo->lastInsertId();
 
                     // Insert size variants
-                    $sizeList = array_map('trim', explode(',', $sizes));
+                    $sizeList = array_values(array_filter(array_map('trim', explode(',', $sizes))));
                     $vStmt = $pdo->prepare("INSERT INTO product_variants (product_id, size, stock_quantity, status, created_at) VALUES (?, ?, 50, 1, NOW())");
                     foreach ($sizeList as $sz) {
-                        if (!empty($sz)) {
-                            $vStmt->execute([$newProdId, $sz]);
-                        }
+                        $vStmt->execute([$newProdId, $sz]);
                     }
 
                     // Assign to this selected school
                     $pdo->prepare("INSERT INTO school_products (school_id, product_id, custom_price, actual_price, vendor_commission, vendor_price, is_mandatory, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE custom_price = VALUES(custom_price), actual_price = VALUES(actual_price), vendor_commission = VALUES(vendor_commission), vendor_price = VALUES(vendor_price), is_mandatory = VALUES(is_mandatory)")
                         ->execute([$schoolId, $newProdId, $price, $actualPrice, $vendorCommission, $actualPrice, $isMandatory]);
+
+                    // If this is a sub-school, also map to its parent school so parent catalog has it
+                    $currS = $pdo->prepare("SELECT * FROM schools WHERE id = ?");
+                    $currS->execute([$schoolId]);
+                    $sInfo = $currS->fetch();
+                    if (!empty($sInfo['parent_id'])) {
+                        $pdo->prepare("INSERT INTO school_products (school_id, product_id, custom_price, actual_price, vendor_commission, vendor_price, is_mandatory, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE custom_price = VALUES(custom_price), actual_price = VALUES(actual_price), vendor_commission = VALUES(vendor_commission), vendor_price = VALUES(vendor_price), is_mandatory = VALUES(is_mandatory)")
+                            ->execute([(int)$sInfo['parent_id'], $newProdId, $price, $actualPrice, $vendorCommission, $actualPrice, $isMandatory]);
+                    }
 
                     clearFastCache();
                     $msg = "SAVED SUCCESSFULLY";
@@ -108,8 +138,9 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $params = [$categoryId, $name, $slug, $sku, $description, $shortDesc, $price, $actualPrice, $vendorCommission, $actualPrice, $isKit, $sizes];
 
                     if ($imagePath) {
+                        $cleanImg = ltrim($imagePath, '/\\');
                         $sql .= ", featured_image = ?";
-                        $params[] = $imagePath;
+                        $params[] = $cleanImg;
                     }
                     $sql .= " WHERE id = ?";
                     $params[] = $id;
@@ -117,27 +148,58 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                     $stmt = $pdo->prepare($sql);
                     $stmt->execute($params);
 
-                    // Update school mapping & pricing
+                    // Update school mapping & pricing on currently selected school
                     $pdo->prepare("INSERT INTO school_products (school_id, product_id, custom_price, actual_price, vendor_commission, vendor_price, is_mandatory, status, created_at) VALUES (?, ?, ?, ?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE custom_price = VALUES(custom_price), actual_price = VALUES(actual_price), vendor_commission = VALUES(vendor_commission), vendor_price = VALUES(vendor_price), is_mandatory = VALUES(is_mandatory)")
                         ->execute([$schoolId, $id, $price, $actualPrice, $vendorCommission, $actualPrice, $isMandatory]);
 
+                    // Propagate to sub-schools or parent school to ensure complete sync
+                    $currS = $pdo->prepare("SELECT * FROM schools WHERE id = ?");
+                    $currS->execute([$schoolId]);
+                    $sInfo = $currS->fetch();
+
+                    if (!empty($sInfo['has_sub_schools'])) {
+                        // This is a parent school -> propagate price updates to all its sub-schools that have this product
+                        $subIdsStmt = $pdo->prepare("SELECT id FROM schools WHERE parent_id = ?");
+                        $subIdsStmt->execute([$schoolId]);
+                        $children = $subIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                        if (!empty($children)) {
+                            $cPlaceholders = implode(',', array_fill(0, count($children), '?'));
+                            $pdo->prepare("UPDATE school_products 
+                                           SET custom_price = ?, actual_price = ?, vendor_commission = ?, vendor_price = ? 
+                                           WHERE product_id = ? AND school_id IN ($cPlaceholders)")
+                                ->execute(array_merge([$price, $actualPrice, $vendorCommission, $actualPrice, $id], $children));
+                        }
+                    } elseif (!empty($sInfo['parent_id'])) {
+                        // This is a sub-school -> also update parent school's school_products entry
+                        $pdo->prepare("UPDATE school_products 
+                                       SET custom_price = ?, actual_price = ?, vendor_commission = ?, vendor_price = ? 
+                                       WHERE product_id = ? AND school_id = ?")
+                            ->execute([$price, $actualPrice, $vendorCommission, $actualPrice, $id, (int)$sInfo['parent_id']]);
+                    }
+
                     // Sync size variants
                     if (!empty($sizes)) {
-                        $sizeList = array_map('trim', explode(',', $sizes));
-                        $existingVariants = $pdo->prepare("SELECT size FROM product_variants WHERE product_id = ?");
-                        $existingVariants->execute([$id]);
-                        $currentSizes = $existingVariants->fetchAll(PDO::FETCH_COLUMN);
-                        $vStmt = $pdo->prepare("INSERT INTO product_variants (product_id, size, stock_quantity, status, created_at) VALUES (?, ?, 50, 1, NOW())");
-                        foreach ($sizeList as $sz) {
-                            if (!empty($sz) && !in_array($sz, $currentSizes, true)) {
-                                $vStmt->execute([$id, $sz]);
+                        $sizeList = array_values(array_filter(array_map('trim', explode(',', $sizes))));
+                        if (!empty($sizeList)) {
+                            $delPlaceholders = implode(',', array_fill(0, count($sizeList), '?'));
+                            $pdo->prepare("DELETE FROM product_variants WHERE product_id = ? AND size NOT IN ($delPlaceholders)")
+                                ->execute(array_merge([$id], $sizeList));
+
+                            $existingVariants = $pdo->prepare("SELECT size FROM product_variants WHERE product_id = ?");
+                            $existingVariants->execute([$id]);
+                            $currentSizes = $existingVariants->fetchAll(PDO::FETCH_COLUMN);
+
+                            $vStmt = $pdo->prepare("INSERT INTO product_variants (product_id, size, stock_quantity, status, created_at) VALUES (?, ?, 50, 1, NOW())");
+                            foreach ($sizeList as $sz) {
+                                if (!in_array($sz, $currentSizes, true)) {
+                                    $vStmt->execute([$id, $sz]);
+                                }
                             }
                         }
                     }
 
                     clearFastCache();
-                    clearFastCache();
-                $msg = "UPDATED SUCCESSFULLY";
+                    $msg = "UPDATED SUCCESSFULLY";
                     logActivity('update_uniform', 'products', (int)$admin['id'], 'admin', "Updated uniform #{$id}");
                 }
             } catch (Exception $e) {
@@ -162,16 +224,46 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 $pdo->prepare("INSERT INTO school_products (school_id, product_id, custom_price, actual_price, vendor_commission, vendor_price, status, created_at) VALUES (?, ?, ?, ?, ?, ?, 1, NOW()) ON DUPLICATE KEY UPDATE custom_price = VALUES(custom_price), actual_price = VALUES(actual_price), vendor_commission = VALUES(vendor_commission), vendor_price = VALUES(vendor_price)")
                     ->execute([$selectedSchoolId, $pId, $newPrice, $actualPrice, $vendorCommission, $actualPrice]);
 
-                // Sync variants
+                // Propagate to sub-schools or parent school
+                $currS = $pdo->prepare("SELECT * FROM schools WHERE id = ?");
+                $currS->execute([$selectedSchoolId]);
+                $sInfo = $currS->fetch();
+
+                if (!empty($sInfo['has_sub_schools'])) {
+                    $subIdsStmt = $pdo->prepare("SELECT id FROM schools WHERE parent_id = ?");
+                    $subIdsStmt->execute([$selectedSchoolId]);
+                    $children = $subIdsStmt->fetchAll(PDO::FETCH_COLUMN);
+                    if (!empty($children)) {
+                        $cPlaceholders = implode(',', array_fill(0, count($children), '?'));
+                        $pdo->prepare("UPDATE school_products 
+                                       SET custom_price = ?, actual_price = ?, vendor_commission = ?, vendor_price = ? 
+                                       WHERE product_id = ? AND school_id IN ($cPlaceholders)")
+                            ->execute(array_merge([$newPrice, $actualPrice, $vendorCommission, $actualPrice, $pId], $children));
+                    }
+                } elseif (!empty($sInfo['parent_id'])) {
+                    $pdo->prepare("UPDATE school_products 
+                                   SET custom_price = ?, actual_price = ?, vendor_commission = ?, vendor_price = ? 
+                                   WHERE product_id = ? AND school_id = ?")
+                        ->execute([$newPrice, $actualPrice, $vendorCommission, $actualPrice, $pId, (int)$sInfo['parent_id']]);
+                }
+
+                // Sync size variants
                 if (!empty($newSizes)) {
-                    $sizeList = array_map('trim', explode(',', $newSizes));
-                    $existingVariants = $pdo->prepare("SELECT size FROM product_variants WHERE product_id = ?");
-                    $existingVariants->execute([$pId]);
-                    $currentSizes = $existingVariants->fetchAll(PDO::FETCH_COLUMN);
-                    $vStmt = $pdo->prepare("INSERT INTO product_variants (product_id, size, stock_quantity, status, created_at) VALUES (?, ?, 50, 1, NOW())");
-                    foreach ($sizeList as $sz) {
-                        if (!empty($sz) && !in_array($sz, $currentSizes, true)) {
-                            $vStmt->execute([$pId, $sz]);
+                    $sizeList = array_values(array_filter(array_map('trim', explode(',', $newSizes))));
+                    if (!empty($sizeList)) {
+                        $delPlaceholders = implode(',', array_fill(0, count($sizeList), '?'));
+                        $pdo->prepare("DELETE FROM product_variants WHERE product_id = ? AND size NOT IN ($delPlaceholders)")
+                            ->execute(array_merge([$pId], $sizeList));
+
+                        $existingVariants = $pdo->prepare("SELECT size FROM product_variants WHERE product_id = ?");
+                        $existingVariants->execute([$pId]);
+                        $currentSizes = $existingVariants->fetchAll(PDO::FETCH_COLUMN);
+
+                        $vStmt = $pdo->prepare("INSERT INTO product_variants (product_id, size, stock_quantity, status, created_at) VALUES (?, ?, 50, 1, NOW())");
+                        foreach ($sizeList as $sz) {
+                            if (!in_array($sz, $currentSizes, true)) {
+                                $vStmt->execute([$pId, $sz]);
+                            }
                         }
                     }
                 }
@@ -188,7 +280,27 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     } elseif ($action === 'unlink_school_product') {
         $spId = (int)$_POST['school_product_id'];
         try {
+            // Also clean up sub-school mapping if unlinking from parent school
+            $spStmt = $pdo->prepare("SELECT school_id, product_id FROM school_products WHERE id = ?");
+            $spStmt->execute([$spId]);
+            $spRow = $spStmt->fetch();
+            if ($spRow) {
+                $curSchId = (int)$spRow['school_id'];
+                $pId = (int)$spRow['product_id'];
+                $sCheck = $pdo->prepare("SELECT has_sub_schools FROM schools WHERE id = ?");
+                $sCheck->execute([$curSchId]);
+                $sMeta = $sCheck->fetch();
+                if (!empty($sMeta['has_sub_schools'])) {
+                    $subIds = $pdo->query("SELECT id FROM schools WHERE parent_id = {$curSchId}")->fetchAll(PDO::FETCH_COLUMN);
+                    if (!empty($subIds)) {
+                        $subP = implode(',', array_fill(0, count($subIds), '?'));
+                        $pdo->prepare("DELETE FROM school_products WHERE product_id = ? AND school_id IN ($subP)")
+                            ->execute(array_merge([$pId], $subIds));
+                    }
+                }
+            }
             $pdo->prepare("DELETE FROM school_products WHERE id = ?")->execute([$spId]);
+            clearFastCache();
             $msg = "Uniform removed from this school's catalog.";
         } catch (Exception $e) {
             $err = "Failed to unlink uniform: " . $e->getMessage();
@@ -196,12 +308,12 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
     }
 }
 
-// Fetch details for the CURRENTLY SELECTED SCHOOL ONLY
+// Current school details are already loaded and verified above
 $currSchoolStmt = $pdo->prepare("SELECT * FROM schools WHERE id = ?");
 $currSchoolStmt->execute([$selectedSchoolId]);
 $currentSchool = $currSchoolStmt->fetch();
-if (!$currentSchool && !empty($allSchools)) {
-    $currentSchool = $allSchools[0];
+if (!$currentSchool) {
+    $currentSchool = reset($schoolsById);
     $selectedSchoolId = (int)$currentSchool['id'];
 }
 
@@ -405,20 +517,45 @@ $schoolUniforms = $stmtUniforms->fetchAll();
     </div>
 <?php endif; ?>
 
-<!-- 1. PRIMARY SCHOOL / COLLEGE SELECTOR BAR (Main Schools Only) -->
+<!-- 1. PRIMARY SCHOOL & SUB-SCHOOL / WING SELECTOR BAR -->
 <div style="background:#ffffff; border-radius:var(--radius-xl); padding:1.25rem 2rem; border:1.5px solid var(--brand-border); margin-bottom:2rem; box-shadow:var(--shadow-sm); display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1.25rem;">
-    <div style="display:flex; align-items:center; gap:0.85rem; flex-wrap:wrap;">
-        <span style="font-size:0.88rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.05em;">
-            🏫 School:
-        </span>
-        <form action="" method="GET" style="display:flex; gap:0.5rem; align-items:center; flex-wrap:wrap; margin:0;">
-            <!-- Main Schools Filter (Only lists main schools) -->
-            <select name="school_id" id="prod_school_id_select" class="form-control" style="width:280px; font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.75rem; border-radius:var(--radius-md);" onchange="this.form.submit()">
-                <?php foreach ($mainSchools as $s): ?>
-                    <option value="<?= $s['id'] ?>" <?= $selectedSchoolId === (int)$s['id'] ? 'selected' : '' ?>>
-                        <?= sanitize($s['name']) ?>
+    <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap;">
+        <!-- 1. School Group / Main School -->
+        <div style="display:flex; align-items:center; gap:0.5rem;">
+            <label for="prod_main_school_picker" style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0; display:flex; align-items:center; gap:4px;">
+                🏫 School:
+            </label>
+            <select id="prod_main_school_picker" class="form-control" style="font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:230px; border:1.5px solid #CBD5E1; background:#ffffff;" onchange="handleMainSchoolChange(this.value)">
+                <?php foreach ($mainSchools as $ms): ?>
+                    <option value="<?= $ms['id'] ?>" <?= $parentSchoolId === (int)$ms['id'] ? 'selected' : '' ?>>
+                        <?= sanitize($ms['name']) ?>
                     </option>
                 <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- 2. Wing / Sub-School Selector -->
+        <form action="<?= BASE_URL ?>/admin/products.php" method="GET" id="sub-school-form" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
+            <label for="prod_school_id_select" style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0; display:flex; align-items:center; gap:4px;">
+                🏷️ Sub-School / Wing:
+            </label>
+            <select name="school_id" id="prod_school_id_select" class="form-control" style="font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#ffffff;" onchange="this.form.submit()">
+                <?php if (!empty($availableSubSchools)): ?>
+                    <option value="<?= $parentSchoolId ?>" <?= $selectedSchoolId === $parentSchoolId ? 'selected' : '' ?> style="font-weight:800; color:#EA580C; background:#FFF7ED;">
+                        ★ All Sub-Schools / Entire Campus (Combined Catalog)
+                    </option>
+                    <optgroup label="Select Specific Wing / Sub-School:">
+                        <?php foreach ($availableSubSchools as $sub): ?>
+                            <option value="<?= $sub['id'] ?>" <?= $selectedSchoolId === (int)$sub['id'] ? 'selected' : '' ?>>
+                                &bull; <?= sanitize($sub['name']) ?>
+                            </option>
+                        <?php endforeach; ?>
+                    </optgroup>
+                <?php else: ?>
+                    <option value="<?= $parentSchoolId ?>" selected disabled>
+                        Main Campus (Single School / No Sub-Schools)
+                    </option>
+                <?php endif; ?>
             </select>
         </form>
     </div>
@@ -444,13 +581,38 @@ $schoolUniforms = $stmtUniforms->fetchAll();
     </div>
 </div>
 
-<!-- 2. SELECTED SCHOOL DETAILS HEADER (Shows ONLY for this selected school) -->
-<div class="school-hero-card" style="padding:1.25rem 1.75rem; margin-bottom:2rem;">
-    <div>
-        <h2 class="heading-1" style="margin:0; font-size:1.5rem; color:var(--brand-dark);"><?= sanitize($currentSchool['name']) ?></h2>
-        <div style="font-size:0.88rem; color:var(--brand-muted); margin-top:0.35rem;">
-            📍 <?= sanitize($currentSchool['location'] ?: $currentSchool['city']) ?> &bull; 
-            <strong style="color:var(--brand-dark);"><?= count($schoolUniforms) ?> Uniforms</strong>
+<!-- 2. SELECTED SCHOOL DETAILS HEADER (Shows for this selected school or sub-school) -->
+<div class="school-hero-card" style="padding:1.25rem 1.75rem; margin-bottom:2rem; background:#ffffff; border:1.5px solid var(--brand-border); border-radius:var(--radius-xl); box-shadow:var(--shadow-sm);">
+    <div style="display:flex; justify-content:space-between; align-items:center; flex-wrap:wrap; gap:1rem;">
+        <div>
+            <div style="display:flex; align-items:center; gap:0.5rem; margin-bottom:0.4rem; flex-wrap:wrap;">
+                <?php if ($isSubSchool): ?>
+                    <span style="font-size:0.75rem; font-weight:800; text-transform:uppercase; color:var(--brand-muted);">
+                        <?= sanitize($parentSchool['name']) ?> &rarr;
+                    </span>
+                    <span style="background:#EFF6FF; color:#1D4ED8; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px; border:1px solid #BFDBFE;">
+                        Wing / Sub-School: <?= sanitize($currentSchool['name']) ?>
+                    </span>
+                <?php else: ?>
+                    <span style="background:#FFF7ED; color:#C2410C; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px; border:1px solid #FED7AA;">
+                        Campus Catalog (All Sub-Schools Combined)
+                    </span>
+                <?php endif; ?>
+            </div>
+            <h2 class="heading-1" style="margin:0; font-size:1.5rem; color:var(--brand-dark);">
+                <?= sanitize($currentSchool['name']) ?>
+            </h2>
+            <div style="font-size:0.85rem; color:var(--brand-muted); margin-top:4px;">
+                📍 <?= sanitize($currentSchool['location'] ?: $currentSchool['city'] ?: 'Trivandrum') ?> &bull; 
+                <strong style="color:var(--brand-primary);"><?= count($schoolUniforms) ?> Uniforms</strong> in this catalog
+            </div>
+        </div>
+
+        <div style="display:flex; gap:0.75rem; align-items:center; flex-wrap:wrap;">
+            <a href="<?= BASE_URL ?>/schools/<?= sanitize($currentSchool['slug']) ?>/order/" target="_blank" class="btn btn-outline btn-sm" style="display:inline-flex; align-items:center; gap:6px; font-weight:700; border-radius:var(--radius-pill); border-color:#FF8A3D; color:#EA580C; background:#FFF7ED;">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"><path d="M18 13v6a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2V8a2 2 0 0 1 2-2h6"/><polyline points="15 3 21 3 21 9"/><line x1="10" y1="14" x2="21" y2="3"/></svg>
+                <span>Live Public Portal ↗</span>
+            </a>
         </div>
     </div>
 </div>
@@ -728,6 +890,10 @@ $schoolUniforms = $stmtUniforms->fetchAll();
 
 <!-- Client-side Strict 500 KB Limit File Validation & Drawer Toggle Script -->
 <script>
+function handleMainSchoolChange(mainSchoolId) {
+    window.location.href = '<?= BASE_URL ?>/admin/products.php?school_id=' + encodeURIComponent(mainSchoolId);
+}
+
 function handleMainSchoolProductChange(mainSelect) {
     const subSelect = document.getElementById('prod_sub_school_id_select');
     if (subSelect) {
