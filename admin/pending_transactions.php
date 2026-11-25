@@ -282,40 +282,60 @@ require_once __DIR__ . '/header.php';
     <form method="GET" action="pending_transactions.php" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
         
         <!-- Mobile / Search Input -->
-        <div style="flex: 1 1 280px;">
+        <div style="flex: 1 1 240px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 🔍 Parent Registered Mobile / Request ID
             </label>
             <div style="position: relative;">
                 <input type="text" name="search" value="<?= htmlspecialchars($searchMobile) ?>" 
-                       placeholder="e.g. 9847012345 or REQ-000045..." 
+                       placeholder="Select" 
                        style="width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
                 <span style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 1rem;">📱</span>
             </div>
         </div>
 
         <!-- Status Filter -->
-        <div style="flex: 0 1 160px;">
+        <div style="flex: 0 1 150px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 Gateway Status
             </label>
             <select name="status" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="">All Incomplete</option>
+                <option value="">Select</option>
                 <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>⏳ Pending</option>
                 <option value="Failed" <?= $statusFilter === 'Failed' ? 'selected' : '' ?>>✕ Failed / Dropped</option>
             </select>
         </div>
 
         <!-- School Filter -->
-        <div style="flex: 1 1 220px;">
+        <div style="flex: 1 1 200px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 School Filter
             </label>
-            <select name="school_id" id="schoolSelect" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="0">All Schools &amp; Campuses</option>
+            <select name="school_id" id="schoolSelect" onchange="updateSubSchools(this.value)" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
+                <option value="0">Select</option>
                 <?php foreach ($mainSchools as $ms): ?>
                     <option value="<?= $ms['id'] ?>" <?= $schoolFilter === (int)$ms['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($ms['name']) ?>
+                    </option>
+                <?php endforeach; ?>
+            </select>
+        </div>
+
+        <!-- Sub-School / Campus Filter -->
+        <div style="flex: 1 1 200px;">
+            <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
+                Sub-School / Campus
+            </label>
+            <select name="sub_school_id" id="subSchoolSelect" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
+                <option value="0">Select</option>
+                <?php foreach ($underSchools as $sub): 
+                    $matchParent = ($schoolFilter === 0 || (int)$sub['parent_id'] === $schoolFilter);
+                ?>
+                    <option value="<?= $sub['id'] ?>" 
+                            data-parent="<?= $sub['parent_id'] ?>" 
+                            <?= $subSchoolFilter === (int)$sub['id'] ? 'selected' : '' ?>
+                            style="<?= $matchParent ? '' : 'display:none;' ?>">
+                        <?= htmlspecialchars($sub['name']) ?>
                     </option>
                 <?php endforeach; ?>
             </select>
@@ -326,7 +346,7 @@ require_once __DIR__ . '/header.php';
             <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <span>Filter</span>
             </button>
-            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0): ?>
+            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0 || $subSchoolFilter > 0): ?>
                 <a href="pending_transactions.php" class="btn btn-outline" style="padding: 0.65rem 1rem; font-weight: 600; border-radius: 10px; text-decoration: none;">
                     Reset
                 </a>
@@ -559,6 +579,30 @@ require_once __DIR__ . '/header.php';
 </div>
 
 <script>
+window.updateSubSchools = function(parentId) {
+    const subSelect = document.getElementById('subSchoolSelect');
+    if (!subSelect) return;
+    const parentNum = parseInt(parentId) || 0;
+    const options = subSelect.querySelectorAll('option');
+    let hasVisibleSelected = false;
+
+    options.forEach((opt, idx) => {
+        if (idx === 0) return; // Keep "Select" always visible
+        const p = parseInt(opt.getAttribute('data-parent')) || 0;
+        if (parentNum === 0 || p === parentNum) {
+            opt.style.display = '';
+            if (opt.selected) hasVisibleSelected = true;
+        } else {
+            opt.style.display = 'none';
+            if (opt.selected) opt.selected = false;
+        }
+    });
+
+    if (!hasVisibleSelected) {
+        subSelect.value = "0";
+    }
+};
+
 window.openMarkPaidModal = function(btn) {
     const modal = document.getElementById('markPaidModal');
     if (!modal) return;
