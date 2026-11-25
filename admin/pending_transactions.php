@@ -58,12 +58,14 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                     order_reference = ?,
                     payment_status = 'Paid',
                     order_status = 'Confirmed',
+                    gateway_transaction_id = ?,
                     payment_method = ?,
                     admin_notes = ?,
                     updated_at = NOW()
                     WHERE id = ?");
                 $upStmt->execute([
                     $newOrderRef,
+                    $finalPayRef,
                     $payMethod,
                     $combinedNotes,
                     $orderId
@@ -150,9 +152,9 @@ if (!empty($searchMobile)) {
     $quotedSearch = $pdo->quote("%{$searchMobile}%");
     if (!empty($cleanPhone) && strlen($cleanPhone) >= 4) {
         $quotedPhone = $pdo->quote("%{$cleanPhone}%");
-        $whereSql .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $whereSql .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
     } else {
-        $whereSql .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $whereSql .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
     }
 }
 
@@ -168,9 +170,9 @@ if (!empty($searchMobile)) {
     $quotedSearch = $pdo->quote("%{$searchMobile}%");
     if (!empty($cleanPhone) && strlen($cleanPhone) >= 4) {
         $quotedPhone = $pdo->quote("%{$cleanPhone}%");
-        $kpiScope .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $kpiScope .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
     } else {
-        $kpiScope .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $kpiScope .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
     }
 }
 
@@ -474,9 +476,11 @@ require_once __DIR__ . '/header.php';
                                 ⏳ PENDING
                             </span>
                         <?php endif; ?>
-                        <?php if (!empty($row['gateway_txn_ref'])): ?>
-                            <div style="font-size: 0.65rem; color: #64748B; margin-top: 3px; font-family: monospace;">
-                                Ref: <?= htmlspecialchars(substr($row['gateway_txn_ref'], 0, 14)) ?>
+                        <?php 
+                        $displayTxnId = !empty($row['gateway_transaction_id']) ? $row['gateway_transaction_id'] : ($row['gateway_txn_ref'] ?? '');
+                        if (!empty($displayTxnId)): ?>
+                            <div style="font-size: 0.68rem; color: #0284C7; font-weight: 700; margin-top: 4px; font-family: monospace; background: #F0F9FF; padding: 2px 6px; border-radius: 4px; display: inline-block; word-break: break-all;" title="Gateway Transaction ID: <?= htmlspecialchars($displayTxnId) ?>">
+                                Txn: <?= htmlspecialchars($displayTxnId) ?>
                             </div>
                         <?php endif; ?>
                     </td>
@@ -554,7 +558,7 @@ require_once __DIR__ . '/header.php';
                     <option value="Direct UPI / QR Payment">📱 Direct UPI / QR Code Payment (Verified)</option>
                     <option value="Bank Transfer / NEFT / IMPS">🏦 Bank Transfer / NEFT / IMPS</option>
                     <option value="Card / POS Machine">💳 Card / POS Machine</option>
-                    <option value="Edviron Gateway Verified">⚡ Edviron Gateway (Verified Manually)</option>
+                    <option value="Online / QR / UPI / Card (Verified)">⚡ Online / QR / UPI / Card (Verified Manually)</option>
                 </select>
             </div>
 

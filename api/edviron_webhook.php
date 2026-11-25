@@ -76,6 +76,8 @@ if (!$order) {
 
 $orderId = (int)$order['id'];
 $orderRef = $order['order_reference'];
+$txnId = !empty($bankRef) ? $bankRef : ($collectId ?: 'TXN-' . strtoupper(bin2hex(random_bytes(6))));
+$cleanMode = !empty($payMethod) && stripos($payMethod, 'edviron') === false ? 'Online / QR / UPI / Card (' . ucfirst($payMethod) . ')' : 'Online / QR / UPI / Card';
 
 if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
     if (empty($orderRef)) {
@@ -84,13 +86,13 @@ if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
 
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$orderRef, $orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', gateway_transaction_id = ?, payment_method = ?, updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$orderRef, $txnId, $cleanMode, $orderId]);
 
         $upPay = $pdo->prepare("UPDATE payments SET status = 'Completed', transaction_ref = ?, payment_method = ?, gateway_response = ?, created_at = NOW() WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $upPay->execute([
-            !empty($bankRef) ? $bankRef : $collectId,
-            'Edviron - ' . ucfirst($payMethod),
+            $txnId,
+            $cleanMode,
             $rawBody,
             $orderId
         ]);
@@ -99,7 +101,7 @@ if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
         $histStmt->execute([
             $orderId,
             $order['order_status'],
-            "Payment verified via Edviron Webhook. Status: {$status}. Bank Ref: {$bankRef}. Official Order ID: {$orderRef}"
+            "Payment verified via Online Gateway Webhook. Status: {$status}. Transaction ID: {$txnId}. Official Order ID: {$orderRef}"
         ]);
 
         $pdo->commit();
@@ -108,14 +110,21 @@ if (in_array($status, ['SUCCESS', 'PAID', 'COMPLETED'])) {
         error_log("Webhook DB error: " . $e->getMessage());
     }
 } elseif (in_array($status, ['FAILED', 'FAILURE', 'USER_DROPPED'])) {
-    // Keep order_reference = NULL
+    // Keep order_reference = NULL, automatically capture and store transaction ID
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', gateway_transaction_id = ?, updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$txnId, $orderId]);
 
-        $upPay = $pdo->prepare("UPDATE payments SET status = 'Failed', gateway_response = ? WHERE order_id = ? ORDER BY id DESC LIMIT 1");
-        $upPay->execute([$rawBody, $orderId]);
+        $upPay = $pdo->prepare("UPDATE payments SET status = 'Failed', transaction_ref = ?, gateway_response = ? WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+        $upPay->execute([$txnId, $rawBody, $orderId]);
+
+        $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, ?, 'Pending', ?, 'Webhook', NOW())");
+        $histStmt->execute([
+            $orderId,
+            $order['order_status'],
+            "Payment attempt {$status} on Online Payment Gateway (Transaction ID: {$txnId})."
+        ]);
 
         $pdo->commit();
     } catch (Throwable $e) {

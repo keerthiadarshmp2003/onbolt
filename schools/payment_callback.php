@@ -185,21 +185,22 @@ if ($isSuccess) {
     $order['order_reference'] = $officialOrderRef;
     $_SESSION['last_order_reference'] = $officialOrderRef;
 
-    $bankRef = $gatewayData['details']['bank_ref'] ?? ($gatewayData['bank_reference'] ?? ($collectId ?: 'TXN-' . strtoupper(bin2hex(random_bytes(4)))));
+    $bankRef = $gatewayData['details']['bank_ref'] ?? ($gatewayData['bank_reference'] ?? ($collectId ?: 'TXN-' . strtoupper(bin2hex(random_bytes(6)))));
     if (empty($bankRef)) {
-        $bankRef = 'TXN-' . strtoupper(bin2hex(random_bytes(4)));
+        $bankRef = 'TXN-' . strtoupper(bin2hex(random_bytes(6)));
     }
-    $payMethod = $gatewayData['details']['payment_mode'] ?? ($gatewayData['payment_mode'] ?? ($gatewayData['payment_method'] ?? 'Edviron UPI/Gateway'));
+    $rawMode = $gatewayData['details']['payment_mode'] ?? ($gatewayData['payment_mode'] ?? ($gatewayData['payment_method'] ?? ''));
+    $cleanMode = !empty($rawMode) && stripos((string)$rawMode, 'edviron') === false ? 'Online / QR / UPI / Card (' . ucfirst((string)$rawMode) . ')' : 'Online / QR / UPI / Card';
 
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$officialOrderRef, $orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET order_reference = ?, payment_status = 'Paid', order_status = 'Confirmed', gateway_transaction_id = ?, payment_method = ?, updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$officialOrderRef, $bankRef, $cleanMode, $orderId]);
 
         $upPay = $pdo->prepare("UPDATE payments SET status = 'Completed', transaction_ref = ?, payment_method = ?, gateway_response = ?, created_at = NOW() WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $upPay->execute([
             $bankRef,
-            'Edviron - ' . ucfirst((string)$payMethod),
+            $cleanMode,
             json_encode($gatewayData ?: ['status' => 'SUCCESS', 'collect_id' => $collectId]),
             $orderId
         ]);
@@ -207,7 +208,7 @@ if ($isSuccess) {
         $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, 'Pending', 'Confirmed', ?, 'Payment Gateway', NOW())");
         $histStmt->execute([
             $orderId,
-            "Payment verified successfully via Edviron Gateway (Bank Ref: {$bankRef}). Official Order ID {$officialOrderRef} generated."
+            "Payment verified successfully via Online Gateway (Transaction ID: {$bankRef}). Transaction Mode: {$cleanMode}. Official Order ID {$officialOrderRef} generated."
         ]);
 
         $pdo->commit();
@@ -221,14 +222,17 @@ if ($isSuccess) {
     header("Location: " . BASE_URL . "/schools/payment-success.php?order=" . urlencode($officialOrderRef));
     exit;
 } elseif ($isFailed) {
-    // Payment Failed or User Cancelled - Keep Order ID NULL!
+    // Payment Failed or User Cancelled - Keep Order ID NULL & Automatically capture gateway transaction ID!
+    $failedTxnId = !empty($collectId) ? $collectId : ($gatewayData['details']['bank_ref'] ?? ($gatewayData['bank_reference'] ?? ($order['gateway_transaction_id'] ?? $paymentRequestId)));
+    
     $pdo->beginTransaction();
     try {
-        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', updated_at = NOW() WHERE id = ?");
-        $upStmt->execute([$orderId]);
+        $upStmt = $pdo->prepare("UPDATE orders SET payment_status = 'Failed', gateway_transaction_id = ?, updated_at = NOW() WHERE id = ?");
+        $upStmt->execute([$failedTxnId, $orderId]);
 
-        $upPay = $pdo->prepare("UPDATE payments SET status = 'Failed', gateway_response = ? WHERE order_id = ? ORDER BY id DESC LIMIT 1");
+        $upPay = $pdo->prepare("UPDATE payments SET status = 'Failed', transaction_ref = ?, gateway_response = ? WHERE order_id = ? ORDER BY id DESC LIMIT 1");
         $upPay->execute([
+            $failedTxnId,
             json_encode($gatewayData ?: ['status' => $status]),
             $orderId
         ]);
@@ -236,7 +240,7 @@ if ($isSuccess) {
         $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, 'Pending', 'Pending', ?, 'Payment Gateway', NOW())");
         $histStmt->execute([
             $orderId,
-            "Payment attempt {$status} on Edviron Gateway."
+            "Payment attempt {$status} on Online Payment Gateway (Transaction ID: {$failedTxnId})."
         ]);
 
         $pdo->commit();
@@ -279,6 +283,17 @@ require_once __DIR__ . '/../includes/header.php';
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
                     <span style="color:#64748B;">Payment Request ID:</span>
                     <strong style="color:#1E2530;"><?= sanitize($paymentRequestId) ?></strong>
+                </div>
+                <?php $currentTxnId = $order['gateway_transaction_id'] ?? ($collectId ?: ''); ?>
+                <?php if (!empty($currentTxnId)): ?>
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <span style="color:#64748B;">Transaction ID:</span>
+                    <strong style="color:#0284C7; font-family: monospace; font-size: 0.85rem;"><?= sanitize($currentTxnId) ?></strong>
+                </div>
+                <?php endif; ?>
+                <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
+                    <span style="color:#64748B;">Transaction Mode:</span>
+                    <strong style="color:#1E2530;">Online / QR / UPI / Card</strong>
                 </div>
                 <div style="display:flex; justify-content:space-between; margin-bottom:0.5rem;">
                     <span style="color:#64748B;">Student:</span>

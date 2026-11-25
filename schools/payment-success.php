@@ -46,8 +46,9 @@ $pStmt = $pdo->prepare("SELECT * FROM payments WHERE order_id = ? ORDER BY id DE
 $pStmt->execute([$orderId]);
 $payment = $pStmt->fetch(PDO::FETCH_ASSOC);
 
-$txnRef = !empty($payment['transaction_ref']) ? $payment['transaction_ref'] : ('TXN-' . strtoupper(substr(md5((string)$order['id']), 0, 8)));
-$payMethod = !empty($payment['payment_method']) ? $payment['payment_method'] : (!empty($order['payment_method']) ? $order['payment_method'] : 'Payment Gateway');
+$txnRef = !empty($order['gateway_transaction_id']) ? $order['gateway_transaction_id'] : (!empty($payment['transaction_ref']) ? $payment['transaction_ref'] : ('TXN-' . strtoupper(substr(md5((string)$order['id']), 0, 8))));
+$rawPayMethod = !empty($payment['payment_method']) ? $payment['payment_method'] : (!empty($order['payment_method']) ? $order['payment_method'] : 'Transaction Mode: Online / QR / UPI / Card');
+$payMethod = str_ireplace('edviron', 'Online', str_replace('Transaction Mode: ', '', $rawPayMethod));
 $payStatus = $order['payment_status'] ?? 'Paid';
 $orderDate = date('d M Y, h:i A', strtotime($order['created_at']));
 

@@ -64,11 +64,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
 
                 // Insert order with NULL order_reference (Generated ONLY after confirmed payment SUCCESS)
                 $stmt = $pdo->prepare("INSERT INTO orders (
-                    order_reference, payment_request_id, school_id, parent_id, parent_name, student_name, grade_class,
+                    order_reference, payment_request_id, gateway_transaction_id, school_id, parent_id, parent_name, student_name, grade_class,
                     mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
                     subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
                     order_status, admin_notes, created_at
-                ) VALUES (NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Kerala', ?, ?, ?, 0.00, ?, 'Pending', ?, 'Pending', 'Placed through unified school ordering portal', NOW())");
+                ) VALUES (NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 'Kerala', ?, ?, ?, 0.00, ?, 'Pending', ?, 'Pending', 'Placed through unified school ordering portal', NOW())");
 
                 $stmt->execute([
                     $school['id'],
@@ -172,6 +172,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                     ], (int)$school['id']);
 
                     if ($collectRes['success'] && !empty($collectRes['collect_request_url'])) {
+                        $collectId = $collectRes['collect_request_id'] ?? '';
+                        if (!empty($collectId)) {
+                            $pdo->prepare("UPDATE orders SET gateway_transaction_id = ? WHERE id = ?")->execute([$collectId, $orderId]);
+                            $pdo->prepare("UPDATE payments SET transaction_ref = ? WHERE order_id = ?")->execute([$collectId, $orderId]);
+                        }
                         header("Location: " . $collectRes['collect_request_url']);
                         exit;
                     }

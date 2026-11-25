@@ -388,8 +388,14 @@ if (isset($_GET['print_receipt'])) {
                     </div>
                     <div class="detail-row">
                         <span class="detail-label">Payment Mode:</span>
-                        <span class="detail-val"><?= htmlspecialchars($order['payment_method']) ?></span>
+                        <span class="detail-val"><?= htmlspecialchars(str_replace('Transaction Mode: ', '', (string)$order['payment_method'])) ?></span>
                     </div>
+                    <?php if (!empty($order['gateway_transaction_id'])): ?>
+                    <div class="detail-row">
+                        <span class="detail-label">Transaction ID:</span>
+                        <span class="detail-val" style="font-family:monospace;"><?= htmlspecialchars($order['gateway_transaction_id']) ?></span>
+                    </div>
+                    <?php endif; ?>
                     <?php if (!empty($order['handover_staff'])): ?>
                     <div class="detail-row">
                         <span class="detail-label">Issued By:</span>
@@ -612,12 +618,13 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $handoverAt = ($fulfillmentType === 'Counter' && $orderStatus === 'Completed') ? date('Y-m-d H:i:s') : null;
         $handoverStaff = $adminName;
         $handoverRecipient = $parentName . " (" . $studentName . ")";
+        $finalWalkinTxn = !empty($paymentRef) ? $paymentRef : ('WALKIN-' . strtoupper(bin2hex(random_bytes(4))));
 
         // Begin Transaction
         $pdo->beginTransaction();
 
         $orderInsert = $pdo->prepare("INSERT INTO orders (
-            order_reference, school_id, sub_school_id, parent_id, parent_name, student_name, gender, grade_class,
+            order_reference, gateway_transaction_id, school_id, sub_school_id, parent_id, parent_name, student_name, gender, grade_class,
             mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
             subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
             order_status, admin_notes, fulfillment_type, handover_staff, handover_recipient, handover_at, created_at, updated_at
@@ -625,6 +632,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
 
         $orderInsert->execute([
             $orderRef,
+            $finalWalkinTxn,
             $schoolId,
             $subSchoolId,
             $parentId,
@@ -652,6 +660,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         ]);
 
         $orderId = (int)$pdo->lastInsertId();
+
+        // Automatically capture and store payment transaction record
+        $payStatus = ($paymentStatus === 'Paid') ? 'Completed' : 'Pending';
+        $payInsert = $pdo->prepare("INSERT INTO payments (
+            order_id, transaction_ref, payment_method, amount, currency, status, created_at
+        ) VALUES (?, ?, ?, ?, 'INR', ?, NOW())");
+        $payInsert->execute([
+            $orderId,
+            $finalWalkinTxn,
+            $paymentMethod,
+            $totalAmount,
+            $payStatus
+        ]);
 
         // Insert Order Items
         $itemInsert = $pdo->prepare("INSERT INTO order_items (

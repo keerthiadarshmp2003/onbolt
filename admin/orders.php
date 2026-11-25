@@ -28,10 +28,13 @@ if (isset($_GET['ajax_order_details'])) {
     if (ob_get_level()) ob_end_clean();
     header('Content-Type: application/json; charset=utf-8');
     $oid = (int)$_GET['ajax_order_details'];
-    $stmt = $pdo->prepare("SELECT o.*, s.name as school_name, s.code as school_code, s.city as school_city 
+    $stmt = $pdo->prepare("SELECT o.*, s.name as school_name, s.code as school_code, s.city as school_city,
+                                  COALESCE(o.gateway_transaction_id, p.transaction_ref) as effective_txn_id 
                            FROM orders o 
                            LEFT JOIN schools s ON o.school_id = s.id 
-                           WHERE o.id = ?");
+                           LEFT JOIN payments p ON p.order_id = o.id
+                           WHERE o.id = ?
+                           ORDER BY p.id DESC LIMIT 1");
     $stmt->execute([$oid]);
     $ord = $stmt->fetch(PDO::FETCH_ASSOC);
     if (!$ord) {
@@ -398,6 +401,8 @@ if ($subSchoolFilter > 0) {
 }
 if (!empty($search)) {
     $sql .= " AND (o.order_reference LIKE " . $pdo->quote("%{$search}%") . " 
+              OR o.gateway_transaction_id LIKE " . $pdo->quote("%{$search}%") . " 
+              OR o.payment_request_id LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.student_name LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.parent_name LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.mobile LIKE " . $pdo->quote("%{$search}%") . ")";
@@ -414,6 +419,8 @@ if ($subSchoolFilter > 0) {
 }
 if (!empty($search)) {
     $scopeCond .= " AND (o.order_reference LIKE " . $pdo->quote("%{$search}%") . " 
+              OR o.gateway_transaction_id LIKE " . $pdo->quote("%{$search}%") . " 
+              OR o.payment_request_id LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.student_name LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.parent_name LIKE " . $pdo->quote("%{$search}%") . " 
               OR o.mobile LIKE " . $pdo->quote("%{$search}%") . ")";
@@ -1055,9 +1062,10 @@ require_once __DIR__ . '/header.php';
                         <div style="font-weight:800; color:var(--brand-dark); margin-bottom:0.4rem; text-transform:uppercase; font-size:0.75rem; letter-spacing:0.05em;">Payment &amp; Delivery</div>
                         <div style="margin-bottom:0.25rem;"><strong>Address:</strong> <?= sanitize($selectedOrder['delivery_address']) ?></div>
                         <div style="margin-bottom:0.25rem;"><strong>Pincode:</strong> <?= sanitize($selectedOrder['pincode']) ?> (<?= sanitize($selectedOrder['state']) ?>)</div>
-                        <div style="margin-bottom:0.25rem;"><strong>Payment Method:</strong> <?= sanitize($selectedOrder['payment_method']) ?></div>
+                        <div style="margin-bottom:0.25rem;"><strong>Transaction Mode:</strong> <?= sanitize(str_replace('Transaction Mode: ', '', (string)$selectedOrder['payment_method'])) ?></div>
                         <div style="margin-bottom:0.25rem;"><strong>Payment Status:</strong> <?= $selectedOrder['payment_status'] === 'Paid' ? '<span style="color:#15803d; font-weight:800; background:#dcfce7; padding:0.15rem 0.55rem; border-radius:9999px;">✓ PAID</span>' : '<span style="font-weight:700; color:var(--brand-primary);">' . sanitize($selectedOrder['payment_status']) . '</span>' ?></div>
-                        <div><strong>Transaction ID:</strong> <code style="font-weight:700; color:var(--brand-dark);"><?= sanitize(!empty($selectedPayment['transaction_ref']) ? $selectedPayment['transaction_ref'] : ('TXN-' . strtoupper(substr(md5((string)$selectedOrder['id']), 0, 8)))) ?></code></div>
+                        <?php $selectedTxnId = !empty($selectedOrder['gateway_transaction_id']) ? $selectedOrder['gateway_transaction_id'] : (!empty($selectedPayment['transaction_ref']) ? $selectedPayment['transaction_ref'] : '—'); ?>
+                        <div><strong>Gateway Transaction ID:</strong> <code style="font-weight:700; color:#0284C7; background:#EFF6FF; padding:2px 8px; border-radius:4px; font-size:0.85rem;"><?= sanitize($selectedTxnId) ?></code></div>
                     </div>
                 </div>
             </div>
@@ -1289,8 +1297,20 @@ require_once __DIR__ . '/header.php';
                         <td style="text-align:center; white-space:nowrap;">
                             <?php if ($o['payment_status'] === 'Paid'): ?>
                                 <span style="background:#DCFCE7; color:#15803D; font-weight:800; font-size:0.7rem; padding:0.18rem 0.5rem; border-radius:9999px; display:inline-block;">✓ Paid</span>
+                            <?php elseif ($o['payment_status'] === 'Failed'): ?>
+                                <span style="background:#FEF2F2; color:#DC2626; font-weight:800; font-size:0.7rem; padding:0.18rem 0.5rem; border-radius:9999px; display:inline-block;">✕ Failed</span>
                             <?php else: ?>
                                 <span style="background:#FEF3C7; color:#B45309; font-weight:800; font-size:0.7rem; padding:0.18rem 0.5rem; border-radius:9999px; display:inline-block;">Pending</span>
+                            <?php endif; ?>
+                            <div style="font-size:0.67rem; font-weight:700; color:#475569; margin-top:3px; max-width:145px; overflow:hidden; text-overflow:ellipsis;" title="<?= htmlspecialchars($o['payment_method']) ?>">
+                                <?= htmlspecialchars(str_replace('Transaction Mode: ', '', (string)$o['payment_method'])) ?>
+                            </div>
+                            <?php 
+                            $orderTxnId = !empty($o['gateway_transaction_id']) ? $o['gateway_transaction_id'] : ($o['payment_txn_ref'] ?? '');
+                            if (!empty($orderTxnId)): ?>
+                                <div style="font-size:0.65rem; color:#0284C7; font-family:monospace; font-weight:700; margin-top:2px; background:#F0F9FF; padding:1px 5px; border-radius:4px; display:inline-block; max-width:145px; overflow:hidden; text-overflow:ellipsis;" title="Gateway Transaction ID: <?= htmlspecialchars($orderTxnId) ?>">
+                                    Txn: <?= htmlspecialchars($orderTxnId) ?>
+                                </div>
                             <?php endif; ?>
                         </td>
                         <td style="font-weight:800; color:var(--brand-dark); text-align:right; white-space:nowrap; font-size:0.82rem;"><?= formatCurrency($o['total_amount']) ?></td>
@@ -1567,8 +1587,8 @@ require_once __DIR__ . '/header.php';
             <!-- Payment & Order Status Row -->
             <div style="display:flex; justify-content:space-between; align-items:center; background:#FFF7ED; border:1px solid #FFEDD5; border-radius:12px; padding:0.85rem 1.25rem; margin-bottom:1.25rem; font-size:0.85rem;">
                 <div>
-                    <strong>Payment Method:</strong> <span id="ovm-payment-method"></span> &bull; 
-                    <strong>Status:</strong> <span id="ovm-payment-status"></span>
+                    <div><strong>Transaction Mode:</strong> <span id="ovm-payment-method"></span> &bull; <strong>Status:</strong> <span id="ovm-payment-status"></span></div>
+                    <div style="margin-top:0.35rem;"><strong>Gateway Transaction ID:</strong> <span id="ovm-txn-id" style="font-family:monospace; font-weight:700; color:#0284C7; background:#EFF6FF; padding:2px 7px; border-radius:4px;"></span></div>
                 </div>
                 <div style="font-size:1.1rem; font-weight:800; color:#FF6702;">
                     Total: <span id="ovm-total-amount"></span>
@@ -1740,10 +1760,11 @@ function openOrderViewModal(orderId) {
                 document.getElementById('ovm-parent-name').textContent = o.parent_name || 'N/A';
                 document.getElementById('ovm-phone').textContent = o.mobile || 'N/A';
                 document.getElementById('ovm-address').textContent = (o.delivery_address || 'Not specified') + (o.pincode ? ' - ' + o.pincode : '');
-                document.getElementById('ovm-payment-method').textContent = o.payment_method || 'Online';
+                document.getElementById('ovm-payment-method').textContent = (o.payment_method || 'Online / QR / UPI / Card').replace('Transaction Mode: ', '');
                 document.getElementById('ovm-payment-status').innerHTML = o.payment_status === 'Paid' 
                     ? '<span style="color:#15803d; font-weight:800; background:#dcfce7; padding:2px 8px; border-radius:9999px;">✓ PAID</span>' 
                     : '<span style="color:#b45309; font-weight:800; background:#fef3c7; padding:2px 8px; border-radius:9999px;">Pending</span>';
+                document.getElementById('ovm-txn-id').textContent = o.gateway_transaction_id || o.effective_txn_id || o.transaction_ref || '—';
                 document.getElementById('ovm-total-amount').textContent = data.total_formatted;
 
                 const tbody = document.getElementById('ovm-items-tbody');

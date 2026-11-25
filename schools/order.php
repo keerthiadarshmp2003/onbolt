@@ -1965,7 +1965,7 @@ require_once __DIR__ . '/../includes/header.php';
     </div>
 </div>
 
-<!-- ==================== EDVIRON INSTITUTIONAL PAYMENT GATEWAY MODAL ==================== -->
+<!-- ==================== SECURE ONLINE PAYMENT GATEWAY MODAL ==================== -->
 <div class="modal-backdrop" id="portal-payment-modal" style="display:none; z-index:99999;">
     <div class="modal-box" style="max-width: 580px; padding: 0; overflow: hidden; border-radius: var(--radius-xl); border: 1.5px solid var(--wizard-border); box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25);">
         
@@ -1974,8 +1974,8 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="display:flex; align-items:center; gap:0.65rem;">
                 <span style="font-size:1.35rem;">🔒</span>
                 <div>
-                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">Edviron Payment Gateway</h3>
-                    <span style="font-size: 0.75rem; color: #94A3B8;">Institutional Online Fee &amp; Uniform Gateway</span>
+                    <h3 style="margin: 0; font-size: 1.15rem; font-weight: 800; color: #ffffff;">Online Payment Gateway</h3>
+                    <span style="font-size: 0.75rem; color: #94A3B8;">Transaction Mode: Online / QR / UPI / Card</span>
                 </div>
             </div>
             <button type="button" onclick="closePaymentModal()" style="background: none; border: none; color: #94A3B8; font-size: 1.8rem; cursor: pointer; line-height: 1;">&times;</button>
@@ -2149,7 +2149,7 @@ require_once __DIR__ . '/../includes/header.php';
             </button>
 
             <div style="text-align: center; margin-top: 0.85rem; font-size: 0.75rem; color: #64748B; display: flex; align-items: center; justify-content: center; gap: 0.4rem;">
-                <span>🔒 Powered by Edviron Payment Gateway &bull; 256-Bit SSL Secured</span>
+                <span>🔒 256-Bit SSL Secured &bull; Transaction Mode: Online / QR / UPI / Card</span>
             </div>
 
         </div>
@@ -3256,14 +3256,14 @@ Please confirm this order. Thank you!`;
             return;
         }
 
-        let finalMethod = 'Edviron Payment Gateway';
+        let finalMethod = 'Transaction Mode: Online / QR / UPI / Card';
 
         const btn = document.getElementById('verify-pay-btn') || document.getElementById('btn-submit-gateway-pay');
         if (!btn) return;
 
         const originalText = btn.innerHTML;
         btn.disabled = true;
-        btn.innerHTML = '<span>🔒 Connecting to Edviron Gateway...</span>';
+        btn.innerHTML = '<span>🔒 Connecting to Secure Payment Gateway...</span>';
 
         const payload = {
             order_reference: state.orderId,
@@ -3292,7 +3292,7 @@ Please confirm this order. Thank you!`;
             const result = await res.json();
 
             if (result && result.success && result.redirect_url) {
-                btn.innerHTML = '<span>✓ Redirecting to Edviron Gateway...</span>';
+                btn.innerHTML = '<span>✓ Redirecting to Secure Payment Gateway...</span>';
                 btn.style.background = '#15803D';
                 setTimeout(() => {
                     window.location.href = result.redirect_url;

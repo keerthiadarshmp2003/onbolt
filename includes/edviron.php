@@ -188,7 +188,7 @@ function edviron_create_collect_request(array $orderData): array {
 
     $errMsg = $res['message'] ?? ($res['error'] ?? "Payment gateway error (HTTP {$httpCode})");
     if ($httpCode === 401) {
-        $errMsg = "Edviron API Authentication Failed: " . ($res['message'] ?? 'Bearer token missing or invalid') . ". Please verify EDVIRON_API_TOKEN in config/edviron.php.";
+        $errMsg = "Payment Gateway Authentication Failed: " . ($res['message'] ?? 'Merchant access token missing or invalid') . ". Please verify gateway configuration.";
     }
 
     return [

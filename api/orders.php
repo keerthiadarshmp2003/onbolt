@@ -91,7 +91,12 @@ try {
     }
     $totalAmount = $subtotal;
     $paymentStatus = 'Pending';
-    $paymentMethod = trim((string)($data['payment_method'] ?? 'Edviron Payment Gateway'));
+    $rawPayMethod = trim((string)($data['payment_method'] ?? 'Online / QR / UPI / Card'));
+    if (stripos($rawPayMethod, 'edviron') !== false || empty($rawPayMethod)) {
+        $paymentMethod = 'Online / QR / UPI / Card';
+    } else {
+        $paymentMethod = $rawPayMethod;
+    }
     $transactionRef = 'PENDING-' . strtoupper(bin2hex(random_bytes(4)));
 
     $pdo = getDbConnection();
@@ -101,13 +106,13 @@ try {
 
     // 1. Insert order with NULL order_reference - Order ID is ONLY generated upon confirmed SUCCESS!
     $stmt = $pdo->prepare("INSERT INTO orders (
-        order_reference, payment_request_id, school_id, parent_id, parent_name, student_name, gender, grade_class,
+        order_reference, payment_request_id, gateway_transaction_id, school_id, parent_id, parent_name, student_name, gender, grade_class,
         mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
         subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
         order_status, admin_notes, created_at
-    ) VALUES (NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
+    ) VALUES (NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, NOW())");
 
-    $adminNotes = "State/District: {$stateDist}. Initiated via online uniform ordering portal. Gateway: {$paymentMethod}.";
+    $adminNotes = "State/District: {$stateDist}. Initiated via online uniform ordering portal. Transaction Mode: {$paymentMethod}.";
 
     $stmt->execute([
         $schoolId,
@@ -190,15 +195,17 @@ try {
 
     if ($collectRes['success'] && !empty($collectRes['collect_request_url'])) {
         $collectRequestId = $collectRes['collect_request_id'] ?? '';
-        $transactionRef = !empty($collectRequestId) ? $collectRequestId : ('EDV-' . strtoupper(bin2hex(random_bytes(4))));
+        $transactionRef = !empty($collectRequestId) ? $collectRequestId : ('TXN-' . strtoupper(bin2hex(random_bytes(6))));
         $redirectUrl = $collectRes['collect_request_url'];
         $gatewayResponse = json_encode($collectRes['raw'] ?? ['status' => 'collect_request_created']);
+        // Automatically capture and store gateway transaction ID on orders
+        $pdo->prepare("UPDATE orders SET payment_request_id = ?, gateway_transaction_id = ? WHERE id = ?")->execute([$paymentRequestId, $transactionRef, $orderId]);
     } else {
-        // Rollback and return exact Edviron gateway error
+        // Rollback and return exact gateway error without brand mentions
         $pdo->rollBack();
         echo json_encode([
             'success' => false,
-            'error'   => $collectRes['error'] ?? 'Unable to initiate Edviron payment session. Please check merchant gateway configuration.'
+            'error'   => $collectRes['error'] ?? 'Unable to initiate online payment session. Please check merchant gateway configuration.'
         ]);
         exit;
     }
@@ -219,7 +226,7 @@ try {
     $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, NULL, 'Pending', ?, 'System', NOW())");
     $histStmt->execute([
         $orderId,
-        "Order initiated. Gateway Collect Request created (Ref: {$transactionRef}). Awaiting parent payment completion."
+        "Order initiated. Gateway Transaction ID: {$transactionRef}. Transaction Mode: {$paymentMethod}. Awaiting parent payment completion."
     ]);
 
     // Admin notification
@@ -239,16 +246,18 @@ try {
 
     ob_clean();
     echo json_encode([
-        'success'             => true,
-        'payment_request_id'  => $paymentRequestId,
-        'order_reference'     => null,
-        'order_id'            => $orderId,
-        'collect_request_id'  => $collectRequestId,
-        'redirect_url'        => $redirectUrl,
-        'payment_status'      => 'Pending',
-        'payment_method'      => $paymentMethod,
-        'total_items'         => $totalItems,
-        'total_amount'        => $totalAmount
+        'success'                => true,
+        'payment_request_id'     => $paymentRequestId,
+        'gateway_transaction_id' => $transactionRef,
+        'transaction_id'         => $transactionRef,
+        'order_reference'        => null,
+        'order_id'               => $orderId,
+        'collect_request_id'     => $collectRequestId,
+        'redirect_url'           => $redirectUrl,
+        'payment_status'         => 'Pending',
+        'payment_method'         => $paymentMethod,
+        'total_items'            => $totalItems,
+        'total_amount'           => $totalAmount
     ]);
 } catch (Throwable $e) {
     if (isset($pdo) && $pdo->inTransaction()) {
