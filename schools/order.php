@@ -1727,16 +1727,11 @@ require_once __DIR__ . '/../includes/header.php';
             <div class="step-header-box">
                 <span class="step-counter-badge">Step 4 of 4</span>
                 <h1 class="display-2" style="font-size: 2.2rem; margin-bottom: 0.5rem;">Verify your order</h1>
-                <p style="color: var(--wizard-muted); font-size: 1.05rem;">Review student details and uniform selections. Download official PDF invoice or send direct to WhatsApp desk.</p>
+                <p style="color: var(--wizard-muted); font-size: 1.05rem;">Review student details and uniform selections before proceeding to secure payment.</p>
             </div>
 
             <div class="verify-order-card">
-                <div class="order-meta-header">
-                    <div>
-                        <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--wizard-muted); display: block;">Requisition Reference</span>
-                        <span class="order-id-badge" id="review-order-id" style="font-size: 0.78rem; font-weight: 700; background: #FFF7ED; color: #EA580C; border: 1px dashed #FDBA74; padding: 4px 10px; border-radius: 6px; letter-spacing: normal;">Generated on Payment Success</span>
-                        <span style="font-size: 0.7rem; color: #94A3B8; display: block; margin-top: 3px;">Unique Order ID for tracking will be issued upon successful payment</span>
-                    </div>
+                <div class="order-meta-header" style="justify-content: flex-end; margin-bottom: 1.25rem;">
                     <div style="text-align: right;">
                         <span style="font-size: 0.75rem; text-transform: uppercase; font-weight: 800; color: var(--wizard-muted); display: block;">Requisition Date</span>
                         <strong style="color: var(--wizard-dark);" id="review-order-date"><?= date('d M Y') ?></strong>
