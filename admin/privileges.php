@@ -51,8 +51,11 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
     }
 }
 
-// Fetch all permissions
-$permissions = $pdo->query("SELECT * FROM permissions ORDER BY id ASC")->fetchAll();
+// Fetch all permissions ordered logically by functional module and id
+$permissions = $pdo->query("
+    SELECT * FROM permissions 
+    ORDER BY FIELD(module, 'Core Management', 'Catalog & Products', 'Parent & Student Accounts', 'Financial Operations', 'Communications & Content', 'Administration & Access'), id ASC
+")->fetchAll();
 
 // Fetch roles to display in matrix
 $roles = $pdo->query("SELECT * FROM roles WHERE slug IN ('superadmin', 'admin', 'school') ORDER BY FIELD(slug, 'superadmin', 'admin', 'school')")->fetchAll();
@@ -106,7 +109,7 @@ require_once __DIR__ . '/header.php';
         <input type="hidden" name="action" value="save_privileges">
 
         <div style="background:#ffffff; border:1.5px solid var(--brand-border); border-radius:var(--radius-xl); box-shadow:var(--shadow-sm); overflow:hidden; margin-bottom:2rem;">
-            <div class="table-scroll-frame" style="max-height:540px; overflow-y:auto; overflow-x:auto; position:relative; border:none; border-radius:0;">
+            <div class="table-scroll-frame" style="max-height:650px; overflow-y:auto; overflow-x:auto; position:relative; border:none; border-radius:0;">
                 <table class="admin-table" style="margin:0; border:none; border-radius:0;">
                     <thead>
                         <tr style="border-bottom:2px solid var(--brand-border);">
@@ -131,7 +134,18 @@ require_once __DIR__ . '/header.php';
                         </tr>
                     </thead>
                     <tbody>
-                        <?php foreach ($permissions as $p): ?>
+                        <?php 
+                        $currentModule = null;
+                        foreach ($permissions as $p): 
+                            if ($currentModule !== $p['module']):
+                                $currentModule = $p['module'];
+                        ?>
+                            <tr style="background:#F8FAFC; border-top:2px solid #E2E8F0; border-bottom:1px solid #E2E8F0;">
+                                <td colspan="<?= count($roles) + 1 ?>" style="padding:0.65rem 1.5rem; font-weight:800; font-size:0.75rem; text-transform:uppercase; letter-spacing:0.06em; color:var(--brand-primary);">
+                                    📁 <?= sanitize($currentModule) ?>
+                                </td>
+                            </tr>
+                        <?php endif; ?>
                             <tr>
                                 <td style="padding:1rem 1.5rem; vertical-align:middle;">
                                     <div style="font-weight:700; color:#0F172A; font-size:0.92rem;">

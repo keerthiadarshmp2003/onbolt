@@ -11,6 +11,11 @@ $adminActive = 'schools';
 $adminTitle = 'Schools Directory & Settings';
 require_once __DIR__ . '/header.php';
 
+if (!adminCan('schools_manage')) {
+    http_response_code(403);
+    die('Access Denied: You do not have permission to access Schools Directory.');
+}
+
 $pdo = getDbConnection();
 $msg = '';
 $err = '';

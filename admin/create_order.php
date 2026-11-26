@@ -14,6 +14,10 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 $admin = requireAdminAuth();
+if (!adminCan('create_order_manage')) {
+    http_response_code(403);
+    die('Access Denied: You do not have permission to access Walk-in Direct Ordering Desk.');
+}
 $adminName = sanitize($admin['full_name']);
 $adminRole = sanitize($admin['role_name']);
 $adminTitle = 'Direct Walk-in Order Desk';

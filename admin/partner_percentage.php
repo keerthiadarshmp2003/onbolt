@@ -12,6 +12,10 @@ require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
 
 $admin = requireAdminAuth();
+if (!adminCan('partner_percentage_view')) {
+    http_response_code(403);
+    die('Access Denied: You do not have permission to view Partner Percentage.');
+}
 $pdo = getDbConnection();
 
 $schoolFilter = (int)($_GET['school_id'] ?? 0);

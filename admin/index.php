@@ -10,6 +10,11 @@ $adminActive = 'dashboard';
 $adminTitle = 'Operations & Parent Purchases Overview';
 require_once __DIR__ . '/header.php';
 
+if (!adminCan('dashboard_view')) {
+    http_response_code(403);
+    die('Access Denied: You do not have permission to access the Dashboard.');
+}
+
 $pdo = getDbConnection();
 
 $schoolFilter = (int)($_GET['school_id'] ?? 0);
