@@ -54,6 +54,25 @@ $isSubSchool = !empty($currentSchool['parent_id']);
 $parentSchoolId = $isSubSchool ? (int)$currentSchool['parent_id'] : (int)$currentSchool['id'];
 $parentSchool = $schoolsById[$parentSchoolId] ?? $currentSchool;
 $availableSubSchools = $subSchoolsByParent[$parentSchoolId] ?? [];
+$availableSubIds = array_map(function($s) { return (int)$s['id']; }, $availableSubSchools);
+
+// Resolve sub_school_ids (multiple selection)
+$rawSubIds = $_GET['sub_school_ids'] ?? null;
+if ($rawSubIds !== null) {
+    if (is_array($rawSubIds)) {
+        $activeSubSchoolIds = array_map('intval', $rawSubIds);
+    } else {
+        $activeSubSchoolIds = array_filter(array_map('intval', explode(',', (string)$rawSubIds)));
+    }
+    $activeSubSchoolIds = array_values(array_intersect($activeSubSchoolIds, $availableSubIds));
+    if (empty($activeSubSchoolIds) && !empty($availableSubIds)) {
+        $activeSubSchoolIds = $availableSubIds;
+    }
+} elseif ($isSubSchool) {
+    $activeSubSchoolIds = [$selectedSchoolId];
+} else {
+    $activeSubSchoolIds = $availableSubIds;
+}
 
 // Fetch categories
 $categories = $pdo->query("SELECT * FROM product_categories ORDER BY sort_order ASC")->fetchAll();
@@ -338,6 +357,20 @@ if ($editId > 0) {
 $search = trim($_GET['search'] ?? '');
 $catFilter = (int)($_GET['category'] ?? 0);
 
+// Target schools scope for uniform catalog query
+$filterTargetSchoolIds = [];
+if (!empty($activeSubSchoolIds)) {
+    $filterTargetSchoolIds = $activeSubSchoolIds;
+    // If all sub-schools are selected, also include parent school ID
+    if (!empty($availableSubIds) && count($activeSubSchoolIds) === count($availableSubIds)) {
+        $filterTargetSchoolIds[] = $parentSchoolId;
+    }
+} else {
+    $filterTargetSchoolIds = [$selectedSchoolId];
+}
+$filterTargetSchoolIds = array_values(array_unique($filterTargetSchoolIds));
+$inSchoolPlaceholders = implode(',', array_fill(0, count($filterTargetSchoolIds), '?'));
+
 $querySql = "SELECT sp.id as school_product_id, sp.school_id, sp.custom_price, sp.is_mandatory,
                     COALESCE(sp.actual_price, p.actual_price, p.vendor_price, ROUND(COALESCE(sp.custom_price, p.price) * 0.70, 2)) as actual_price,
                     COALESCE(sp.vendor_commission, p.vendor_commission, ROUND(COALESCE(sp.custom_price, p.price) - COALESCE(sp.actual_price, p.actual_price, p.vendor_price, p.price * 0.70), 2)) as vendor_commission,
@@ -346,9 +379,9 @@ $querySql = "SELECT sp.id as school_product_id, sp.school_id, sp.custom_price, s
              FROM school_products sp
              JOIN products p ON sp.product_id = p.id
              LEFT JOIN product_categories c ON p.category_id = c.id
-             WHERE sp.school_id = ?";
+             WHERE sp.school_id IN ($inSchoolPlaceholders)";
 
-$params = [$selectedSchoolId];
+$params = $filterTargetSchoolIds;
 
 if ($catFilter > 0) {
     $querySql .= " AND p.category_id = ?";
@@ -527,10 +560,11 @@ $schoolUniforms = $stmtUniforms->fetchAll();
     <div style="display:flex; align-items:center; gap:1.25rem; flex-wrap:wrap;">
         <!-- 1. School Group / Main School -->
         <div style="display:flex; align-items:center; gap:0.5rem;">
-            <label for="prod_main_school_picker" style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0; display:flex; align-items:center; gap:4px;">
-                🏫 School:
+            <label for="prod_main_school_picker" style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0;">
+                School:
             </label>
             <select id="prod_main_school_picker" class="form-control" style="font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:230px; border:1.5px solid #CBD5E1; background:#ffffff;" onchange="handleMainSchoolChange(this.value)">
+                <option value="" disabled>Select your School</option>
                 <?php foreach ($mainSchools as $ms): ?>
                     <option value="<?= $ms['id'] ?>" <?= $parentSchoolId === (int)$ms['id'] ? 'selected' : '' ?>>
                         <?= sanitize($ms['name']) ?>
@@ -539,29 +573,68 @@ $schoolUniforms = $stmtUniforms->fetchAll();
             </select>
         </div>
 
-        <!-- 2. Wing / Sub-School Selector -->
-        <form action="<?= BASE_URL ?>/admin/products.php" method="GET" id="sub-school-form" style="display:flex; align-items:center; gap:0.5rem; margin:0;">
-            <label for="prod_school_id_select" style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0; display:flex; align-items:center; gap:4px;">
-                🏷️ Sub-School / Wing:
+        <!-- 2. Sub School Selector with Checkbox Multi-Select -->
+        <form action="<?= BASE_URL ?>/admin/products.php" method="GET" id="sub-school-form" style="display:flex; align-items:center; gap:0.5rem; margin:0; position:relative;">
+            <input type="hidden" name="school_id" value="<?= $parentSchoolId ?>">
+            <?php if ($catFilter > 0): ?>
+                <input type="hidden" name="category" value="<?= $catFilter ?>">
+            <?php endif; ?>
+            <?php if (!empty($search)): ?>
+                <input type="hidden" name="search" value="<?= htmlspecialchars($search) ?>">
+            <?php endif; ?>
+
+            <label style="font-size:0.84rem; font-weight:800; color:var(--brand-dark); text-transform:uppercase; letter-spacing:0.04em; margin:0;">
+                Sub School:
             </label>
-            <select name="school_id" id="prod_school_id_select" class="form-control" style="font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#ffffff;" onchange="this.form.submit()">
-                <?php if (!empty($availableSubSchools)): ?>
-                    <option value="<?= $parentSchoolId ?>" <?= $selectedSchoolId === $parentSchoolId ? 'selected' : '' ?> style="font-weight:800; color:#EA580C; background:#FFF7ED;">
-                        ★ All Sub-Schools / Entire Campus (Combined Catalog)
-                    </option>
-                    <optgroup label="Select Specific Wing / Sub-School:">
-                        <?php foreach ($availableSubSchools as $sub): ?>
-                            <option value="<?= $sub['id'] ?>" <?= $selectedSchoolId === (int)$sub['id'] ? 'selected' : '' ?>>
-                                &bull; <?= sanitize($sub['name']) ?>
-                            </option>
-                        <?php endforeach; ?>
-                    </optgroup>
-                <?php else: ?>
-                    <option value="<?= $parentSchoolId ?>" selected disabled>
-                        Main Campus (Single School / No Sub-Schools)
-                    </option>
-                <?php endif; ?>
-            </select>
+
+            <?php if (!empty($availableSubSchools)): ?>
+                <div class="sub-school-multiselect" style="position:relative; min-width:280px;">
+                    <button type="button" id="subSchoolDropdownBtn" onclick="toggleSubSchoolDropdown(event)" class="form-control" style="display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#ffffff; cursor:pointer; text-align:left;">
+                        <span id="subSchoolBtnLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:230px;">
+                            Select your Sub School
+                        </span>
+                        <svg id="subSchoolArrowIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5" style="margin-left:8px; transition:transform 0.2s; flex-shrink:0;">
+                            <polyline points="6 9 12 15 18 9"></polyline>
+                        </svg>
+                    </button>
+
+                    <!-- Dropdown Checklist Box -->
+                    <div id="subSchoolDropdownPanel" style="display:none; position:absolute; top:calc(100% + 5px); left:0; width:100%; min-width:300px; background:#ffffff; border:1.5px solid #CBD5E1; border-radius:var(--radius-md); box-shadow:0 12px 28px -4px rgba(0,0,0,0.18); z-index:99999; padding:0.5rem 0;">
+                        <!-- Select All Checkbox Above -->
+                        <label style="display:flex; align-items:center; gap:10px; padding:0.6rem 0.85rem; cursor:pointer; font-weight:800; font-size:0.85rem; color:#EA580C; background:#FFF7ED; margin:0 0.4rem; border-radius:6px; border:1px solid #FED7AA;">
+                            <input type="checkbox" id="selectAllSubSchools" onchange="toggleSelectAllSubSchools(this)" style="width:16px; height:16px; accent-color:#EA580C; cursor:pointer;">
+                            <span>Select All</span>
+                        </label>
+
+                        <div style="height:1px; background:#E2E8F0; margin:0.4rem 0;"></div>
+
+                        <!-- Each checkbox near the sub school -->
+                        <div style="max-height:220px; overflow-y:auto; padding:0 0.4rem;">
+                            <?php foreach ($availableSubSchools as $sub): ?>
+                                <?php $isChecked = in_array((int)$sub['id'], $activeSubSchoolIds, true); ?>
+                                <label class="sub-school-option-row" style="display:flex; align-items:center; gap:10px; padding:0.5rem 0.65rem; cursor:pointer; font-weight:700; font-size:0.84rem; color:var(--brand-dark); border-radius:6px; transition:background 0.15s; margin-bottom:2px;">
+                                    <input type="checkbox" name="sub_school_ids[]" value="<?= $sub['id'] ?>" class="sub-school-checkbox" data-name="<?= htmlspecialchars($sub['name']) ?>" <?= $isChecked ? 'checked' : '' ?> onchange="handleSubSchoolCheckChange()" style="width:16px; height:16px; accent-color:var(--brand-primary); cursor:pointer;">
+                                    <span style="user-select:none;"><?= sanitize($sub['name']) ?></span>
+                                </label>
+                            <?php endforeach; ?>
+                        </div>
+
+                        <!-- Footer with Apply button -->
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem 0.2rem; border-top:1px solid #E2E8F0; margin-top:0.4rem;">
+                            <span id="subSelectedCountText" style="font-size:0.75rem; font-weight:700; color:#64748B;">
+                                0 selected
+                            </span>
+                            <button type="submit" class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem; font-size:0.78rem; font-weight:700;">
+                                Apply
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            <?php else: ?>
+                <select class="form-control" style="font-weight:700; font-size:0.88rem; color:#94A3B8; padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#F8FAFC;" disabled>
+                    <option selected>Main Campus (Single School / No Sub Schools)</option>
+                </select>
+            <?php endif; ?>
         </form>
     </div>
 
@@ -596,11 +669,15 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                         <?= sanitize($parentSchool['name']) ?> &rarr;
                     </span>
                     <span style="background:#EFF6FF; color:#1D4ED8; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px; border:1px solid #BFDBFE;">
-                        Wing / Sub-School: <?= sanitize($currentSchool['name']) ?>
+                        Sub School: <?= sanitize($currentSchool['name']) ?>
+                    </span>
+                <?php elseif (!empty($availableSubSchools) && count($activeSubSchoolIds) < count($availableSubIds)): ?>
+                    <span style="background:#EFF6FF; color:#1D4ED8; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px; border:1px solid #BFDBFE;">
+                        Sub Schools: <?= count($activeSubSchoolIds) ?> Selected
                     </span>
                 <?php else: ?>
                     <span style="background:#FFF7ED; color:#C2410C; font-weight:800; font-size:0.75rem; padding:3px 10px; border-radius:9999px; border:1px solid #FED7AA;">
-                        Campus Catalog (All Sub-Schools Combined)
+                        Campus Catalog (All Sub Schools Combined)
                     </span>
                 <?php endif; ?>
             </div>
@@ -658,7 +735,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
             <div class="form-group">
                 <label class="form-label">Category</label>
                 <select name="category_id" class="form-control" required>
-                    <option value="" disabled <?= empty($editProduct['category_id']) ? 'selected' : '' ?>>Select Category</option>
+                    <option value="" disabled <?= empty($editProduct['category_id']) ? 'selected' : '' ?>>Select your Category</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?= $cat['id'] ?>" <?= (!empty($editProduct['category_id']) && $editProduct['category_id'] == $cat['id']) ? 'selected' : '' ?>>
                             <?= sanitize($cat['name']) ?>
@@ -751,10 +828,13 @@ $schoolUniforms = $stmtUniforms->fetchAll();
     </div>
 
     <form action="" method="GET" style="display:flex; gap:0.5rem; flex-wrap:wrap;">
-        <input type="hidden" name="school_id" value="<?= $selectedSchoolId ?>">
+        <input type="hidden" name="school_id" value="<?= $parentSchoolId ?>">
+        <?php foreach ($activeSubSchoolIds as $subId): ?>
+            <input type="hidden" name="sub_school_ids[]" value="<?= $subId ?>">
+        <?php endforeach; ?>
 
-        <select name="category" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:160px;" onchange="this.form.submit()">
-            <option value="0">Select Category</option>
+        <select name="category" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;" onchange="this.form.submit()">
+            <option value="0">Select your Category</option>
             <?php foreach ($categories as $c): ?>
                 <option value="<?= $c['id'] ?>" <?= $catFilter === (int)$c['id'] ? 'selected' : '' ?>><?= sanitize($c['name']) ?></option>
             <?php endforeach; ?>
@@ -763,7 +843,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
         <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Uniform Name" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;">
         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
         <?php if ($catFilter > 0 || !empty($search)): ?>
-            <a href="<?= BASE_URL ?>/admin/products.php?school_id=<?= $selectedSchoolId ?>" class="btn btn-outline btn-sm">Reset</a>
+            <a href="<?= BASE_URL ?>/admin/products.php?school_id=<?= $parentSchoolId ?><?= !empty($activeSubSchoolIds) ? '&' . http_build_query(['sub_school_ids' => $activeSubSchoolIds]) : '' ?>" class="btn btn-outline btn-sm">Reset</a>
         <?php endif; ?>
     </form>
 </div>
@@ -902,13 +982,80 @@ function handleMainSchoolChange(mainSchoolId) {
     window.location.href = '<?= BASE_URL ?>/admin/products.php?school_id=' + encodeURIComponent(mainSchoolId);
 }
 
-function handleMainSchoolProductChange(mainSelect) {
-    const subSelect = document.getElementById('prod_sub_school_id_select');
-    if (subSelect) {
-        subSelect.value = '';
+function toggleSubSchoolDropdown(e) {
+    if (e) e.stopPropagation();
+    const panel = document.getElementById('subSchoolDropdownPanel');
+    const arrow = document.getElementById('subSchoolArrowIcon');
+    if (!panel) return;
+    const isShown = panel.style.display === 'block';
+    panel.style.display = isShown ? 'none' : 'block';
+    if (arrow) {
+        arrow.style.transform = isShown ? 'rotate(0deg)' : 'rotate(180deg)';
     }
-    mainSelect.form.submit();
 }
+
+function updateSubSchoolDisplay() {
+    const allCheckbox = document.getElementById('selectAllSubSchools');
+    const checkboxes = Array.from(document.querySelectorAll('.sub-school-checkbox'));
+    const countText = document.getElementById('subSelectedCountText');
+    const label = document.getElementById('subSchoolBtnLabel');
+    if (!checkboxes.length) return;
+
+    const checkedBoxes = checkboxes.filter(cb => cb.checked);
+    const total = checkboxes.length;
+    const checkedCount = checkedBoxes.length;
+
+    // Update Select All Checkbox
+    if (allCheckbox) {
+        allCheckbox.checked = (checkedCount === total && total > 0);
+        allCheckbox.indeterminate = (checkedCount > 0 && checkedCount < total);
+    }
+
+    if (countText) {
+        countText.textContent = `${checkedCount} of ${total} selected`;
+    }
+
+    if (label) {
+        if (checkedCount === 0) {
+            label.textContent = 'Select your Sub School';
+        } else if (checkedCount === total) {
+            label.textContent = 'All Sub Schools (Combined Catalog)';
+        } else if (checkedCount === 1) {
+            label.textContent = checkedBoxes[0].getAttribute('data-name') || '1 Sub School';
+        } else {
+            label.textContent = `${checkedCount} Sub Schools Selected`;
+        }
+    }
+}
+
+function toggleSelectAllSubSchools(selectAllEl) {
+    const isChecked = selectAllEl.checked;
+    const checkboxes = document.querySelectorAll('.sub-school-checkbox');
+    checkboxes.forEach(cb => {
+        cb.checked = isChecked;
+    });
+    updateSubSchoolDisplay();
+}
+
+function handleSubSchoolCheckChange() {
+    updateSubSchoolDisplay();
+}
+
+document.addEventListener('click', function(e) {
+    const panel = document.getElementById('subSchoolDropdownPanel');
+    const btn = document.getElementById('subSchoolDropdownBtn');
+    const arrow = document.getElementById('subSchoolArrowIcon');
+    if (panel && panel.style.display === 'block') {
+        if (!panel.contains(e.target) && (!btn || !btn.contains(e.target))) {
+            panel.style.display = 'none';
+            if (arrow) arrow.style.transform = 'rotate(0deg)';
+        }
+    }
+});
+
+document.addEventListener('DOMContentLoaded', function() {
+    updateSubSchoolDisplay();
+});
 
 function toggleUniformForm() {
     const box = document.getElementById('uniform-form-box');
