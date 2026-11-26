@@ -26,64 +26,34 @@ $inProgressOrders = (int)$pdo->query("SELECT COUNT(*) FROM orders WHERE order_st
 $deliveredOrders = (int)$pdo->query("SELECT COUNT(*) FROM orders WHERE order_status IN ('Delivered', 'Dispatched', 'Dispatched by hand')")->fetchColumn();
 $totalRevenue = (float)$pdo->query("SELECT COALESCE(SUM(total_amount), 0) FROM orders WHERE order_status NOT IN ('Cancelled', 'Refunded')")->fetchColumn();
 
-// Additional Statistics Overview Queries
-$totalUnitsSold = (int)$pdo->query("SELECT COALESCE(SUM(quantity), 0) FROM order_items")->fetchColumn();
-$avgOrderValue = $totalOrders > 0 ? ($totalRevenue / $totalOrders) : 0.0;
+// Financial Overview Metrics (Income, Expense, Profit)
+$financialIncome = $totalRevenue;
+$financialExpense = (float)$pdo->query("
+    SELECT COALESCE(SUM(oi.quantity * ROUND(oi.unit_price * 0.30, 2)), 0) 
+    FROM order_items oi 
+    JOIN orders o ON oi.order_id = o.id 
+    WHERE o.order_status NOT IN ('Cancelled', 'Refunded')
+")->fetchColumn();
+$financialProfit = max(0, $financialIncome - $financialExpense);
 
-// Order Status Breakdown
-$statusBreakdown = $pdo->query("
-    SELECT order_status, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0) as total 
-    FROM orders 
-    GROUP BY order_status 
-    ORDER BY cnt DESC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-// School Performance Breakdown
-$schoolBreakdown = $pdo->query("
+// Schools Overview Donut Data
+$schoolsDonutData = $pdo->query("
     SELECT 
         CASE WHEN s.parent_id IS NOT NULL THEN p.name ELSE s.name END as school_name,
-        COUNT(DISTINCT o.id) as orders_count,
-        COALESCE(SUM(o.total_amount), 0) as revenue
+        COUNT(DISTINCT o.id) as orders_count
     FROM orders o
     JOIN schools s ON o.school_id = s.id
     LEFT JOIN schools p ON s.parent_id = p.id
     GROUP BY school_name
-    ORDER BY revenue DESC
+    ORDER BY orders_count DESC
 ")->fetchAll(PDO::FETCH_ASSOC);
 
-// Uniform Category Breakdown
-$categoryBreakdown = $pdo->query("
-    SELECT p.uniform_group, COUNT(oi.id) as item_sales, COALESCE(SUM(oi.total_price), 0) as group_revenue 
-    FROM order_items oi 
-    JOIN products p ON oi.product_id = p.id 
-    GROUP BY p.uniform_group
-    ORDER BY group_revenue DESC
-")->fetchAll(PDO::FETCH_ASSOC);
-
-// Top Selling Uniforms
-$topSellingUniforms = $pdo->query("
-    SELECT p.name, COALESCE(SUM(oi.quantity), 0) as total_qty, COALESCE(SUM(oi.total_price), 0) as total_sales 
-    FROM order_items oi 
-    JOIN products p ON oi.product_id = p.id 
-    GROUP BY p.id, p.name 
-    ORDER BY total_sales DESC 
-    LIMIT 4
-")->fetchAll(PDO::FETCH_ASSOC);
-
-// Payment Methods & Statuses
-$paymentBreakdown = $pdo->query("
-    SELECT payment_status, COUNT(*) as cnt, COALESCE(SUM(total_amount), 0) as total 
-    FROM orders 
-    GROUP BY payment_status
-")->fetchAll(PDO::FETCH_ASSOC);
-
-$paymentMethods = $pdo->query("
-    SELECT payment_method, COUNT(*) as cnt 
-    FROM orders 
-    WHERE payment_method IS NOT NULL AND payment_method != '' 
-    GROUP BY payment_method 
-    ORDER BY cnt DESC
-")->fetchAll(PDO::FETCH_ASSOC);
+$donutLabels = [];
+$donutCounts = [];
+foreach ($schoolsDonutData as $sd) {
+    $donutLabels[] = $sd['school_name'] ?: 'Partner School';
+    $donutCounts[] = (int)$sd['orders_count'];
+}
 ?>
 
 <!-- KPI Stat Cards -->
@@ -144,232 +114,190 @@ $paymentMethods = $pdo->query("
     </a>
 </div>
 
-<!-- Statistics Overview Section -->
-<div style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--brand-border); padding:2rem; box-shadow:var(--shadow-sm); margin-top:1.5rem;">
-    <!-- Section Header -->
-    <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.5rem; flex-wrap:wrap; gap:1rem; border-bottom:1px solid #F1F5F9; padding-bottom:1.25rem;">
-        <div>
-            <div style="display:flex; align-items:center; gap:0.5rem;">
-                <h3 class="heading-2" style="font-size:1.35rem; margin:0; color:var(--brand-dark);">Statistics Overview</h3>
-                <span style="display:inline-flex; align-items:center; gap:5px; font-size:0.72rem; font-weight:800; background:#ECFDF5; color:#047857; padding:3px 8px; border-radius:9999px; border:1px solid #A7F3D0;">
-                    <span style="width:6px; height:6px; border-radius:50%; background:#10B981;"></span> LIVE
-                </span>
-            </div>
-            <p style="font-size:0.83rem; color:var(--brand-muted); margin:0.25rem 0 0 0;">Comprehensive operational metrics, fulfillment progress, and revenue distribution across schools.</p>
+<!-- Statistics Overview Section (Matching Reference Design) -->
+<div class="overview-charts-grid" style="display:grid; grid-template-columns: 1.75fr 1.15fr; gap:1.5rem; margin-top:1.5rem; margin-bottom:2rem;">
+    
+    <!-- Left Card: Financial Overview (Bar Chart) -->
+    <div style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--brand-border); padding:1.75rem 2rem; box-shadow:var(--shadow-sm); display:flex; flex-direction:column;">
+        <div style="margin-bottom:1.5rem;">
+            <h3 class="heading-2" style="font-size:1.3rem; margin:0; color:var(--brand-dark); font-weight:800;">Financial Overview</h3>
+            <p style="font-size:0.82rem; color:var(--brand-muted); margin:0.25rem 0 0 0;">Overview of total income, vendor expenses, and net profit.</p>
         </div>
-        <div style="display:flex; gap:0.6rem; align-items:center;">
-            <a href="<?= BASE_URL ?>/admin/orders.php" class="btn btn-outline btn-sm" style="font-size:0.8rem; font-weight:700;">View All Orders &rarr;</a>
+        <div style="position:relative; width:100%; height:320px; flex:1;">
+            <canvas id="financialOverviewChart"></canvas>
         </div>
     </div>
 
-    <!-- Mini KPI Highlights Bar -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap:1rem; margin-bottom:1.75rem; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--radius-lg); padding:1.25rem;">
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Average Order Value</div>
-            <div style="font-size:1.3rem; font-weight:800; color:var(--brand-dark); margin-top:0.25rem;"><?= formatCurrency($avgOrderValue) ?></div>
+    <!-- Right Card: Schools Overview (Donut Chart) -->
+    <div style="background:#ffffff; border-radius:var(--radius-xl); border:1px solid var(--brand-border); padding:1.75rem 2rem; box-shadow:var(--shadow-sm); display:flex; flex-direction:column;">
+        <div style="margin-bottom:1.5rem;">
+            <h3 class="heading-2" style="font-size:1.3rem; margin:0; color:var(--brand-dark); font-weight:800;">Schools Overview</h3>
+            <p style="font-size:0.82rem; color:var(--brand-muted); margin:0.25rem 0 0 0;">Comparison of schools to total orders.</p>
         </div>
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Total Uniforms Ordered</div>
-            <div style="font-size:1.3rem; font-weight:800; color:var(--brand-dark); margin-top:0.25rem;"><?= $totalUnitsSold ?> <span style="font-size:0.85rem; font-weight:600; color:#64748B;">Units</span></div>
-        </div>
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Confirmed Order Ratio</div>
-            <div style="font-size:1.3rem; font-weight:800; color:#047857; margin-top:0.25rem;">
-                <?= $totalOrders > 0 ? number_format((($totalOrders - $pendingOrders) / $totalOrders) * 100, 1) : 0 ?>%
-            </div>
-        </div>
-        <div>
-            <div style="font-size:0.75rem; font-weight:700; color:#64748B; text-transform:uppercase; letter-spacing:0.04em;">Processed For Dispatch</div>
-            <div style="font-size:1.3rem; font-weight:800; color:var(--brand-primary); margin-top:0.25rem;">
-                <?= $inProgressOrders + $deliveredOrders ?> <span style="font-size:0.85rem; font-weight:600; color:#64748B;">Orders</span>
-            </div>
+        <div style="position:relative; width:100%; height:320px; flex:1; display:flex; align-items:center; justify-content:center;">
+            <canvas id="schoolsOverviewDonut"></canvas>
         </div>
     </div>
 
-    <!-- 2x2 Grid of Detailed Analytics Cards -->
-    <div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(360px, 1fr)); gap:1.5rem;">
-        
-        <!-- Card 1: Order Pipeline & Fulfillment Status -->
-        <div style="border:1px solid #E2E8F0; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; background:#ffffff;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-                <h4 style="font-size:0.95rem; font-weight:800; color:var(--brand-dark); margin:0;">Order Fulfillment Pipeline</h4>
-                <span style="font-size:0.75rem; font-weight:700; color:#64748B;"><?= $totalOrders ?> Orders</span>
-            </div>
-            
-            <div style="display:flex; flex-direction:column; gap:0.95rem;">
-                <?php
-                $statusColors = [
-                    'Confirmed' => ['#1D4ED8', '#DBEAFE', '#2563EB'],
-                    'Pending' => ['#B45309', '#FEF3C7', '#F59E0B'],
-                    'In progress' => ['#7E22CE', '#F3E8FF', '#9333EA'],
-                    'Production' => ['#7E22CE', '#F3E8FF', '#9333EA'],
-                    'Dispatched' => ['#0369A1', '#E0F2FE', '#0284C7'],
-                    'Dispatched by Hand / Delivered' => ['#15803D', '#DCFCE7', '#16A34A'],
-                    'Completed' => ['#15803D', '#DCFCE7', '#16A34A'],
-                    'Cancelled' => ['#DC2626', '#FEE2E2', '#EF4444'],
-                    'Refunded' => ['#9333EA', '#FAF5FF', '#A855F7'],
-                ];
-                
-                foreach ($statusBreakdown as $sb):
-                    $stName = $sb['order_status'];
-                    $stCnt = (int)$sb['cnt'];
-                    $stTotal = (float)$sb['total'];
-                    $pct = $totalOrders > 0 ? ($stCnt / $totalOrders) * 100 : 0;
-                    $cfg = $statusColors[$stName] ?? ['#475569', '#F1F5F9', '#64748B'];
-                ?>
-                    <div>
-                        <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.82rem; margin-bottom:0.35rem;">
-                            <span style="font-weight:700; color:#1E293B; display:flex; align-items:center; gap:6px;">
-                                <span style="width:8px; height:8px; border-radius:50%; background:<?= $cfg[2] ?>;"></span>
-                                <?= htmlspecialchars($stName) ?>
-                            </span>
-                            <span style="font-weight:700; color:#64748B;">
-                                <?= $stCnt ?> <span style="font-weight:500; font-size:0.75rem;">(<?= number_format($pct, 1) ?>%)</span> &bull; <?= formatCurrency($stTotal) ?>
-                            </span>
-                        </div>
-                        <div style="height:7px; background:#F1F5F9; border-radius:9999px; overflow:hidden;">
-                            <div style="height:100%; width:<?= min(100, max(3, $pct)) ?>%; background:<?= $cfg[2] ?>; border-radius:9999px;"></div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
+</div>
 
-        <!-- Card 2: Partner School Revenue & Order Distribution -->
-        <div style="border:1px solid #E2E8F0; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; background:#ffffff;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-                <h4 style="font-size:0.95rem; font-weight:800; color:var(--brand-dark); margin:0;">Partner Schools Distribution</h4>
-                <a href="<?= BASE_URL ?>/admin/schools.php" style="font-size:0.75rem; font-weight:700; color:var(--brand-primary); text-decoration:none;">Schools &rarr;</a>
-            </div>
+<style>
+@media (max-width: 960px) {
+    .overview-charts-grid {
+        grid-template-columns: 1fr !important;
+    }
+}
+</style>
 
-            <div style="display:flex; flex-direction:column; gap:1.15rem;">
-                <?php
-                $schoolColors = ['#FF6702', '#2563EB', '#10B981', '#8B5CF6'];
-                $sIdx = 0;
-                foreach ($schoolBreakdown as $sc):
-                    $scName = $sc['school_name'] ?: 'Other Partner School';
-                    $scOrders = (int)$sc['orders_count'];
-                    $scRev = (float)$sc['revenue'];
-                    $scPct = $totalRevenue > 0 ? ($scRev / $totalRevenue) * 100 : 0;
-                    $barColor = $schoolColors[$sIdx % count($schoolColors)];
-                    $sIdx++;
-                ?>
-                    <div>
-                        <div style="display:flex; justify-content:space-between; align-items:flex-end; font-size:0.83rem; margin-bottom:0.35rem;">
-                            <div>
-                                <div style="font-weight:800; color:var(--brand-dark);"><?= htmlspecialchars($scName) ?></div>
-                                <div style="font-size:0.75rem; color:#64748B; font-weight:600;"><?= $scOrders ?> Orders Recorded</div>
-                            </div>
-                            <div style="text-align:right;">
-                                <div style="font-weight:800; color:var(--brand-primary);"><?= formatCurrency($scRev) ?></div>
-                                <div style="font-size:0.72rem; color:#64748B; font-weight:700;"><?= number_format($scPct, 1) ?>% Share</div>
-                            </div>
-                        </div>
-                        <div style="height:8px; background:#F1F5F9; border-radius:9999px; overflow:hidden;">
-                            <div style="height:100%; width:<?= min(100, max(4, $scPct)) ?>%; background:<?= $barColor ?>; border-radius:9999px;"></div>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
+<script src="<?= BASE_URL ?>/assets/js/chart.min.js"></script>
+<script>
+document.addEventListener('DOMContentLoaded', function() {
+    // 1. Financial Overview Bar Chart
+    const finCanvas = document.getElementById('financialOverviewChart');
+    if (finCanvas && typeof Chart !== 'undefined') {
+        const finCtx = finCanvas.getContext('2d');
+        const incomeVal = <?= json_encode((float)$financialIncome) ?>;
+        const expenseVal = <?= json_encode((float)$financialExpense) ?>;
+        const profitVal = <?= json_encode((float)$financialProfit) ?>;
 
-        <!-- Card 3: Uniform Categories & Top Selling Garments -->
-        <div style="border:1px solid #E2E8F0; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; background:#ffffff;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-                <h4 style="font-size:0.95rem; font-weight:800; color:var(--brand-dark); margin:0;">Category &amp; Product Demand</h4>
-                <a href="<?= BASE_URL ?>/admin/products.php" style="font-size:0.75rem; font-weight:700; color:var(--brand-primary); text-decoration:none;">Products &rarr;</a>
-            </div>
-
-            <!-- Categories pills -->
-            <div style="display:flex; gap:0.6rem; flex-wrap:wrap; margin-bottom:1.2rem;">
-                <?php foreach ($categoryBreakdown as $cb): 
-                    $grp = ucfirst(strtolower($cb['uniform_group'] ?: 'General'));
-                    $grpRev = (float)$cb['group_revenue'];
-                    $grpSales = (int)$cb['item_sales'];
-                ?>
-                    <div style="flex:1; min-width:105px; background:#F8FAFC; border:1px solid #E2E8F0; border-radius:8px; padding:0.6rem 0.75rem;">
-                        <div style="font-size:0.7rem; font-weight:700; color:#64748B; text-transform:uppercase;"><?= htmlspecialchars($grp) ?></div>
-                        <div style="font-size:0.9rem; font-weight:800; color:var(--brand-dark); margin-top:2px;"><?= formatCurrency($grpRev) ?></div>
-                        <div style="font-size:0.72rem; color:#64748B; font-weight:600;"><?= $grpSales ?> sold</div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-
-            <!-- Top Products List -->
-            <div style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.5rem;">Top Uniform Demand</div>
-            <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                <?php foreach ($topSellingUniforms as $tpu): ?>
-                    <div style="display:flex; justify-content:space-between; align-items:center; font-size:0.8rem; background:#FAFAFA; border:1px solid #F1F5F9; border-radius:6px; padding:0.45rem 0.7rem;">
-                        <span style="font-weight:700; color:#1E293B; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:210px;">
-                            <?= htmlspecialchars($tpu['name']) ?>
-                        </span>
-                        <div style="display:flex; align-items:center; gap:0.6rem;">
-                            <span style="font-size:0.72rem; font-weight:700; background:#E0F2FE; color:#0369A1; padding:1px 6px; border-radius:4px;"><?= (int)$tpu['total_qty'] ?> pcs</span>
-                            <span style="font-weight:800; color:var(--brand-dark);"><?= formatCurrency((float)$tpu['total_sales']) ?></span>
-                        </div>
-                    </div>
-                <?php endforeach; ?>
-            </div>
-        </div>
-
-        <!-- Card 4: Payment Methods & Collection Status -->
-        <div style="border:1px solid #E2E8F0; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; background:#ffffff;">
-            <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1.2rem;">
-                <h4 style="font-size:0.95rem; font-weight:800; color:var(--brand-dark); margin:0;">Payment Collections &amp; Gateways</h4>
-                <a href="<?= BASE_URL ?>/admin/pending_transactions.php" style="font-size:0.75rem; font-weight:700; color:#DC2626; text-decoration:none;">Issues &rarr;</a>
-            </div>
-
-            <div style="display:flex; flex-direction:column; gap:1rem;">
-                <!-- Payment Status Blocks -->
-                <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.75rem;">
-                    <?php
-                    $paidStats = ['cnt' => 0, 'total' => 0.0];
-                    $pendingPayStats = ['cnt' => 0, 'total' => 0.0];
-                    foreach ($paymentBreakdown as $pb) {
-                        if ($pb['payment_status'] === 'Paid') {
-                            $paidStats = $pb;
-                        } elseif ($pb['payment_status'] === 'Pending') {
-                            $pendingPayStats = $pb;
+        new Chart(finCtx, {
+            type: 'bar',
+            data: {
+                labels: ['Income', 'Expense', 'Profit'],
+                datasets: [{
+                    data: [incomeVal, expenseVal, profitVal],
+                    backgroundColor: [
+                        '#0F172A', // Dark Navy for Income
+                        '#EF4444', // Red/Coral for Expense
+                        '#10B981'  // Emerald Green for Profit
+                    ],
+                    borderRadius: 4,
+                    borderSkipped: false,
+                    maxBarThickness: 55,
+                    barPercentage: 0.6
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                plugins: {
+                    legend: {
+                        display: false
+                    },
+                    tooltip: {
+                        backgroundColor: '#0F172A',
+                        titleColor: '#FFFFFF',
+                        bodyColor: '#FFFFFF',
+                        titleFont: { size: 13, weight: '700' },
+                        bodyFont: { size: 13, weight: '800' },
+                        padding: 12,
+                        cornerRadius: 8,
+                        displayColors: false,
+                        callbacks: {
+                            label: function(context) {
+                                return ' ₹ ' + Number(context.raw).toLocaleString('en-IN', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+                            }
                         }
                     }
-                    ?>
-                    <div style="background:#ECFDF5; border:1px solid #A7F3D0; border-radius:8px; padding:0.75rem;">
-                        <div style="font-size:0.72rem; font-weight:800; color:#047857; text-transform:uppercase;">Settled / Verified</div>
-                        <div style="font-size:1.15rem; font-weight:800; color:#065F46; margin-top:2px;"><?= formatCurrency((float)$paidStats['total']) ?></div>
-                        <div style="font-size:0.72rem; color:#047857; font-weight:700; margin-top:2px;"><?= $paidStats['cnt'] ?> verified orders</div>
-                    </div>
-                    <div style="background:#FFFBEB; border:1px solid #FDE68A; border-radius:8px; padding:0.75rem;">
-                        <div style="font-size:0.72rem; font-weight:800; color:#B45309; text-transform:uppercase;">Awaiting Settlement</div>
-                        <div style="font-size:1.15rem; font-weight:800; color:#92400E; margin-top:2px;"><?= formatCurrency((float)$pendingPayStats['total']) ?></div>
-                        <div style="font-size:0.72rem; color:#B45309; font-weight:700; margin-top:2px;"><?= $pendingPayStats['cnt'] ?> pending attempts</div>
-                    </div>
-                </div>
+                },
+                scales: {
+                    x: {
+                        grid: {
+                            display: false,
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#475569',
+                            font: { size: 13, weight: '700' },
+                            padding: 10
+                        }
+                    },
+                    y: {
+                        beginAtZero: true,
+                        suggestedMax: 40000,
+                        grid: {
+                            color: '#F1F5F9',
+                            drawBorder: false
+                        },
+                        ticks: {
+                            color: '#94A3B8',
+                            font: { size: 11, weight: '600' },
+                            padding: 8,
+                            callback: function(val) {
+                                if (val >= 100000) {
+                                    return '₹' + (val / 100000).toFixed(1) + 'L';
+                                } else if (val >= 1000) {
+                                    return '₹' + (val / 1000).toFixed(0) + 'K';
+                                }
+                                return '₹' + val;
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
 
-                <!-- Payment Methods Distribution -->
-                <div>
-                    <div style="font-size:0.75rem; font-weight:800; color:#475569; text-transform:uppercase; letter-spacing:0.04em; margin-bottom:0.5rem;">Payment Channel Distribution</div>
-                    <div style="display:flex; flex-direction:column; gap:0.5rem;">
-                        <?php foreach ($paymentMethods as $pm): 
-                            $mName = $pm['payment_method'];
-                            $mCnt = (int)$pm['cnt'];
-                            $mPct = $totalOrders > 0 ? ($mCnt / $totalOrders) * 100 : 0;
-                        ?>
-                            <div>
-                                <div style="display:flex; justify-content:space-between; font-size:0.78rem; font-weight:700; margin-bottom:0.25rem;">
-                                    <span style="color:#1E293B;"><?= htmlspecialchars($mName) ?></span>
-                                    <span style="color:#64748B;"><?= $mCnt ?> transactions (<?= number_format($mPct, 1) ?>%)</span>
-                                </div>
-                                <div style="height:6px; background:#F1F5F9; border-radius:9999px; overflow:hidden;">
-                                    <div style="height:100%; width:<?= min(100, max(5, $mPct)) ?>%; background:var(--brand-primary); border-radius:9999px;"></div>
-                                </div>
-                            </div>
-                        <?php endforeach; ?>
-                    </div>
-                </div>
-            </div>
-        </div>
+    // 2. Schools Overview Donut Chart
+    const schoolCanvas = document.getElementById('schoolsOverviewDonut');
+    if (schoolCanvas && typeof Chart !== 'undefined') {
+        const schoolCtx = schoolCanvas.getContext('2d');
+        const labels = <?= json_encode($donutLabels) ?>;
+        const counts = <?= json_encode($donutCounts) ?>;
 
-    </div>
-</div>
+        new Chart(schoolCtx, {
+            type: 'doughnut',
+            data: {
+                labels: labels,
+                datasets: [{
+                    data: counts,
+                    backgroundColor: [
+                        '#0F172A', // Dark navy
+                        '#2563EB', // Blue
+                        '#FF6702', // Orange (if extra school)
+                        '#10B981'  // Green (if extra school)
+                    ],
+                    borderWidth: 0,
+                    hoverOffset: 4
+                }]
+            },
+            options: {
+                responsive: true,
+                maintainAspectRatio: false,
+                cutout: '70%',
+                plugins: {
+                    legend: {
+                        position: 'bottom',
+                        labels: {
+                            boxWidth: 26,
+                            boxHeight: 14,
+                            padding: 20,
+                            color: '#1E293B',
+                            font: { size: 12, weight: '700' }
+                        }
+                    },
+                    tooltip: {
+                        backgroundColor: '#0F172A',
+                        titleColor: '#FFFFFF',
+                        bodyColor: '#FFFFFF',
+                        titleFont: { size: 13, weight: '700' },
+                        bodyFont: { size: 12, weight: '700' },
+                        padding: 12,
+                        cornerRadius: 8,
+                        callbacks: {
+                            label: function(context) {
+                                const total = context.dataset.data.reduce((a, b) => a + b, 0);
+                                const val = context.raw || 0;
+                                const pct = total > 0 ? ((val / total) * 100).toFixed(1) : 0;
+                                return ' ' + val + ' Orders (' + pct + '%)';
+                            }
+                        }
+                    }
+                }
+            }
+        });
+    }
+});
+</script>
 
 <?php require_once __DIR__ . '/footer.php'; ?>
