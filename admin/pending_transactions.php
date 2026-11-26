@@ -410,23 +410,12 @@ require_once __DIR__ . '/header.php';
                    style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
         </div>
 
-        <!-- Sort by Date -->
-        <div style="flex: 0 1 140px;">
-            <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
-                Sort by Date
-            </label>
-            <select name="sort_date" style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="desc" <?= $sortDate === 'desc' ? 'selected' : '' ?>>Newest First</option>
-                <option value="asc" <?= $sortDate === 'asc' ? 'selected' : '' ?>>Oldest First</option>
-            </select>
-        </div>
-
         <!-- Filter Action Buttons -->
         <div style="display: flex; gap: 0.5rem;">
             <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <span>Filter</span>
             </button>
-            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0 || $subSchoolFilter > 0 || !empty($dateFilter) || $sortDate !== 'desc'): ?>
+            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0 || $subSchoolFilter > 0 || !empty($dateFilter)): ?>
                 <a href="pending_transactions.php" class="btn btn-outline" style="padding: 0.65rem 1rem; font-weight: 600; border-radius: 10px; text-decoration: none;">
                     Reset
                 </a>
@@ -442,13 +431,7 @@ require_once __DIR__ . '/header.php';
         <thead>
             <tr>
                 <th style="width: 130px;">Request ID</th>
-                <th style="width: 140px;">
-                    <a href="?<?= http_build_query(array_merge($_GET, ['sort_date' => $sortDate === 'asc' ? 'desc' : 'asc'])) ?>" 
-                       style="color: inherit; text-decoration: none;" 
-                       title="Sort by Date (Currently <?= $sortDate === 'asc' ? 'Oldest First - Click for Newest' : 'Newest First - Click for Oldest' ?>)">
-                        Date
-                    </a>
-                </th>
+                <th style="width: 140px;">Date</th>
                 <th style="min-width: 160px;">Parent Name</th>
                 <th style="min-width: 160px;">Student Name</th>
                 <th style="width: 140px;">Phone Number</th>
