@@ -158,7 +158,7 @@ $unassignedProducts = $unassignedStmt->fetchAll();
 
                 <div class="form-group">
                     <label class="form-label">School-Specific Custom Price (Optional Override)</label>
-                    <input type="number" step="0.01" name="custom_price" class="form-control" placeholder="Leave blank to use base catalog price">
+                    <input type="number" step="0.01" name="custom_price" class="form-control" placeholder="Enter your Custom Price">
                 </div>
 
                 <div class="form-group">

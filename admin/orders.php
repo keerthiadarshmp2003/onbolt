@@ -1096,7 +1096,7 @@ require_once __DIR__ . '/header.php';
 
                         <div>
                             <label style="display:block; font-size:0.8rem; font-weight:700; color:var(--brand-dark); margin-bottom:0.35rem;">Internal Production Notes</label>
-                            <textarea name="admin_notes" rows="4" class="form-control" style="width:100%; font-size:0.82rem; resize:vertical; border-radius:var(--radius-md);" placeholder="State/District notes, sizing, fulfillment details..."><?= sanitize($selectedOrder['admin_notes'] ?? '') ?></textarea>
+                            <textarea name="admin_notes" rows="4" class="form-control" style="width:100%; font-size:0.82rem; resize:vertical; border-radius:var(--radius-md);" placeholder="Enter your Internal Production Notes"><?= sanitize($selectedOrder['admin_notes'] ?? '') ?></textarea>
                         </div>
 
                         <button type="submit" class="btn btn-primary" style="width:100%; justify-content:center; padding:0.65rem 1rem; font-weight:800; border-radius:var(--radius-md); box-shadow:0 3px 10px rgba(255,103,2,0.3);">
@@ -1185,7 +1185,7 @@ require_once __DIR__ . '/header.php';
 
         <!-- Status Filter -->
         <select name="status" class="form-control" style="padding:0.4rem 0.65rem; font-size:0.8rem; width:140px; border-radius:var(--radius-md);" onchange="this.form.submit()">
-            <option value="">All Statuses</option>
+            <option value="">Select Status</option>
             <?php foreach ($statuses as $st): ?>
                 <option value="<?= $st ?>" <?= $statusFilter === $st ? 'selected' : '' ?>><?= $st ?></option>
             <?php endforeach; ?>
@@ -1193,7 +1193,7 @@ require_once __DIR__ . '/header.php';
 
         <!-- Main Schools Filter (shows only main schools) -->
         <select name="school_id" id="school_id_select" class="form-control" style="padding:0.4rem 0.65rem; font-size:0.8rem; width:190px; border-radius:var(--radius-md);" onchange="handleMainSchoolFilterChange(this)">
-            <option value="">All Schools</option>
+            <option value="">Select School</option>
             <?php foreach ($mainSchools as $s): ?>
                 <option value="<?= $s['id'] ?>" data-has-subs="<?= (int)$s['has_sub_schools'] ?>" <?= $schoolFilter === (int)$s['id'] ? 'selected' : '' ?>><?= sanitize($s['name']) ?></option>
             <?php endforeach; ?>
@@ -1201,7 +1201,7 @@ require_once __DIR__ . '/header.php';
 
         <!-- Under Schools Filter (shows all under schools) -->
         <select name="sub_school_id" id="sub_school_id_select" class="form-control" style="padding:0.4rem 0.65rem; font-size:0.8rem; width:190px; border-radius:var(--radius-md);" onchange="this.form.submit()" <?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'disabled' : '' ?>>
-            <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'All Under Schools' ?></option>
+            <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'Select Under School' ?></option>
             <?php foreach ($underSchools as $sub): ?>
                 <?php 
                     if ($schoolFilter > 0 && (int)$sub['parent_id'] !== $schoolFilter) {
@@ -1216,7 +1216,7 @@ require_once __DIR__ . '/header.php';
 
         <!-- Search Bar with Search Icon -->
         <div style="flex:1; min-width:180px; max-width:260px; position:relative;">
-            <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Ref / Student / Phone…" class="form-control" style="width:100%; padding:0.4rem 0.65rem 0.4rem 2rem; font-size:0.8rem; border-radius:var(--radius-md);">
+            <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Order Reference, Student, or Phone" class="form-control" style="width:100%; padding:0.4rem 0.65rem 0.4rem 2rem; font-size:0.8rem; border-radius:var(--radius-md);">
             <svg style="position:absolute; left:8px; top:50%; transform:translateY(-50%); width:13px; height:13px; color:var(--brand-muted); pointer-events:none;" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
         </div>
 
@@ -1247,7 +1247,7 @@ require_once __DIR__ . '/header.php';
 
     <div style="display:flex; align-items:center; gap:0.6rem; margin:0; flex-wrap:wrap;">
         <select id="bulk-new-status" class="form-control" style="padding:0.38rem 0.75rem; font-size:0.82rem; font-weight:700; width:auto; border-radius:var(--radius-md); border-color:#FFC499;" onchange="onBulkStatusSelectChange()">
-            <option value="" disabled selected>-- Select Status to Apply --</option>
+            <option value="" disabled selected>Select Status</option>
             <?php foreach ($allowedStatuses as $st): ?>
                 <option value="<?= $st ?>"><?= $st === 'Production' ? 'In Production' : $st ?></option>
             <?php endforeach; ?>
@@ -1495,7 +1495,7 @@ require_once __DIR__ . '/header.php';
 
             <div style="text-align:left; margin-bottom:1.25rem;">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:0.35rem;">Reason for Cancellation (Optional)</label>
-                <input type="text" name="cancel_reason" id="cancel-modal-reason" placeholder="e.g. Parent requested, Duplicate order" class="form-control" style="width:100%; font-size:0.85rem; padding:0.5rem 0.75rem; border-radius:8px;">
+                <input type="text" name="cancel_reason" id="cancel-modal-reason" placeholder="Enter your Reason for Cancellation" class="form-control" style="width:100%; font-size:0.85rem; padding:0.5rem 0.75rem; border-radius:8px;">
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
@@ -1538,7 +1538,7 @@ require_once __DIR__ . '/header.php';
 
             <div style="text-align:left; margin-bottom:1.25rem;">
                 <label style="display:block; font-size:0.8rem; font-weight:700; color:#334155; margin-bottom:0.35rem;">Refund Notes / Transaction ID</label>
-                <input type="text" name="refund_notes" id="refund-modal-notes" placeholder="e.g. Returned to card / UPI / Counter cash refund" class="form-control" style="width:100%; font-size:0.85rem; padding:0.5rem 0.75rem; border-radius:8px;">
+                <input type="text" name="refund_notes" id="refund-modal-notes" placeholder="Enter your Refund Notes / Transaction ID" class="form-control" style="width:100%; font-size:0.85rem; padding:0.5rem 0.75rem; border-radius:8px;">
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">

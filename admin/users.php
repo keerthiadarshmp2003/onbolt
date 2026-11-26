@@ -233,7 +233,7 @@ function renderSchoolMultiSelect($prefix, $hierarchicalSchools) {
             <!-- Top Fixed Search & Actions Header -->
             <div style="padding:0.75rem 0.85rem 0.6rem 0.85rem; background:#F8FAFC; border-bottom:1px solid #E2E8F0;">
                 <div style="position:relative; margin-bottom:0.45rem;">
-                    <input type="text" placeholder="Search school name..." onkeyup="filterSchoolOptions('<?= $prefix ?>', this.value)" style="width:100%; box-sizing:border-box; font-size:0.82rem; padding:0.45rem 0.75rem 0.45rem 2rem; border:1.5px solid #CBD5E1; border-radius:6px; background:#ffffff; outline:none;" autocomplete="off">
+                    <input type="text" placeholder="Enter your School Name" onkeyup="filterSchoolOptions('<?= $prefix ?>', this.value)" style="width:100%; box-sizing:border-box; font-size:0.82rem; padding:0.45rem 0.75rem 0.45rem 2rem; border:1.5px solid #CBD5E1; border-radius:6px; background:#ffffff; outline:none;" autocomplete="off">
                     <span style="position:absolute; left:0.65rem; top:50%; transform:translateY(-50%); font-size:0.8rem; color:#94A3B8;">🔍</span>
                 </div>
                 <div style="display:flex; justify-content:space-between; align-items:center;">
@@ -343,7 +343,7 @@ require_once __DIR__ . '/header.php';
                     <label class="form-label" style="font-weight:700; font-size:0.85rem; color:var(--brand-dark);">
                         Username *
                     </label>
-                    <input type="text" name="username" required placeholder="e.g. school_admin1, desk_tvm" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md);">
+                    <input type="text" name="username" required placeholder="Enter your Username" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md);">
                 </div>
 
                 <!-- Password Input -->
@@ -351,7 +351,7 @@ require_once __DIR__ . '/header.php';
                     <label class="form-label" style="font-weight:700; font-size:0.85rem; color:var(--brand-dark);">
                         Password *
                     </label>
-                    <input type="password" name="password" required placeholder="Enter secure password" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md);">
+                    <input type="password" name="password" required placeholder="Enter your Password" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem; border-radius:var(--radius-md);">
                 </div>
 
                 <!-- Roles Dropdown (Superadmin, Admin, School) -->
@@ -392,7 +392,7 @@ require_once __DIR__ . '/header.php';
             <form action="" method="GET" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin:0;">
                 <!-- Main Schools Filter -->
                 <select name="school_id" id="users_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:140px;" onchange="handleMainSchoolUserChange(this)">
-                    <option value="">All Schools</option>
+                    <option value="">Select School</option>
                     <?php foreach ($mainSchools as $s): ?>
                         <option value="<?= $s['id'] ?>" data-has-subs="<?= (int)$s['has_sub_schools'] ?>" <?= $schoolFilter === (int)$s['id'] ? 'selected' : '' ?>>
                             <?= sanitize($s['name']) ?>
@@ -402,7 +402,7 @@ require_once __DIR__ . '/header.php';
 
                 <!-- Under Schools Filter -->
                 <select name="sub_school_id" id="users_sub_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:145px;" onchange="this.form.submit()" <?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'disabled' : '' ?>>
-                    <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'All Under Schools' ?></option>
+                    <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'Select Under School' ?></option>
                     <?php foreach ($underSchools as $sub): ?>
                         <?php 
                             if ($schoolFilter > 0 && (int)$sub['parent_id'] !== $schoolFilter) {
@@ -554,7 +554,7 @@ require_once __DIR__ . '/header.php';
 
             <div class="form-group" style="margin-bottom:1.2rem;">
                 <label class="form-label" style="font-weight:700; font-size:0.85rem;">New Password <span style="font-size:0.75rem; color:var(--brand-muted);">(Leave blank to keep existing)</span></label>
-                <input type="password" name="password" placeholder="Enter new password to change" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem;">
+                <input type="password" name="password" placeholder="Enter your New Password" class="form-control" style="font-size:0.88rem; padding:0.6rem 0.85rem;">
             </div>
 
             <div class="form-group" style="margin-bottom:1.5rem;">

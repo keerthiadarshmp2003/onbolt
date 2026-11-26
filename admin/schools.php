@@ -484,7 +484,7 @@ foreach ($subs as $sub) {
                             <div id="custom-unit-box-create" style="display:none; margin-top:0.5rem;">
                                 <div style="display:flex; align-items:center; gap:0.4rem;">
                                     <span style="font-size:0.85rem; font-weight:700; color:#475569; white-space:nowrap;">Select</span>
-                                    <input type="text" name="sub_school_label" id="input_sub_school_label_create" placeholder="Enter label (e.g. Campus, Branch)" class="form-control" style="font-size:0.85rem; padding:0.35rem 0.65rem; height:auto;">
+                                    <input type="text" name="sub_school_label" id="input_sub_school_label_create" placeholder="Enter your Sub-School Label" class="form-control" style="font-size:0.85rem; padding:0.35rem 0.65rem; height:auto;">
                                 </div>
                                 <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Visible on public order page as: Select &quot;&lt;your text&gt;&quot;</div>
                             </div>
@@ -503,22 +503,22 @@ foreach ($subs as $sub) {
                 <div style="display:grid; grid-template-columns: 1.5fr 0.8fr 1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Name *</label>
-                        <input type="text" name="single_name" id="single_name_input" placeholder="Enter your school name" class="form-control" required>
+                        <input type="text" name="single_name" id="single_name_input" placeholder="Enter your School Name" class="form-control" required>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Code (3 Letters) *</label>
-                        <input type="text" name="single_code" id="single_code_input" placeholder="e.g. TIN" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+                        <input type="text" name="single_code" id="single_code_input" placeholder="Enter your School Code" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Campus Location</label>
-                        <input type="text" name="single_location" placeholder="Enter your campus location" class="form-control">
+                        <input type="text" name="single_location" placeholder="Enter your Campus Location" class="form-control">
                     </div>
 
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Contact Phone</label>
-                        <input type="tel" name="single_contact_phone" placeholder="Enter your contact phone" class="form-control">
+                        <input type="tel" name="single_contact_phone" placeholder="Enter your Contact Phone" class="form-control">
                     </div>
                 </div>
             </div>
@@ -532,7 +532,7 @@ foreach ($subs as $sub) {
                 <div style="margin-bottom:1.5rem; max-width:650px;">
                     <div class="form-group" style="margin:0;">
                         <label class="form-label" style="font-weight:700;">Common School Name *</label>
-                        <input type="text" name="multi_name" id="multi_name_input" placeholder="Enter your school name" class="form-control">
+                        <input type="text" name="multi_name" id="multi_name_input" placeholder="Enter your School Name" class="form-control">
                     </div>
                 </div>
 
@@ -557,19 +557,19 @@ foreach ($subs as $sub) {
                             <input type="hidden" name="sub_school_id[]" value="0">
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Individual School Name *</label>
-                                <input type="text" name="sub_school_name[]" placeholder="Enter your school name" class="form-control" style="font-size:0.9rem;">
+                                <input type="text" name="sub_school_name[]" placeholder="Enter your School Name" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Code (3 Letters)</label>
-                                <input type="text" name="sub_school_code[]" placeholder="e.g. GPS" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+                                <input type="text" name="sub_school_code[]" placeholder="Enter your School Code" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Campus / Board / Location</label>
-                                <input type="text" name="sub_school_location[]" placeholder="Enter your campus location" class="form-control" style="font-size:0.9rem;">
+                                <input type="text" name="sub_school_location[]" placeholder="Enter your Campus Location" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Contact Phone</label>
-                                <input type="tel" name="sub_school_phone[]" placeholder="Enter your contact phone" class="form-control" style="font-size:0.9rem;">
+                                <input type="tel" name="sub_school_phone[]" placeholder="Enter your Contact Phone" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div style="padding-top:1.2rem;">
                                 <button type="button" onclick="removeSubSchoolRow(this)" class="btn btn-outline btn-sm" style="color:#DC2626; border-color:#FCA5A5; padding:0.4rem 0.65rem;" title="Remove this sub-school">
@@ -582,19 +582,19 @@ foreach ($subs as $sub) {
                             <input type="hidden" name="sub_school_id[]" value="0">
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Individual School Name *</label>
-                                <input type="text" name="sub_school_name[]" placeholder="Enter your school name" class="form-control" style="font-size:0.9rem;">
+                                <input type="text" name="sub_school_name[]" placeholder="Enter your School Name" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Code (3 Letters)</label>
-                                <input type="text" name="sub_school_code[]" placeholder="e.g. GPS" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+                                <input type="text" name="sub_school_code[]" placeholder="Enter your School Code" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Campus / Board / Location</label>
-                                <input type="text" name="sub_school_location[]" placeholder="Enter your campus location" class="form-control" style="font-size:0.9rem;">
+                                <input type="text" name="sub_school_location[]" placeholder="Enter your Campus Location" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div>
                                 <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Contact Phone</label>
-                                <input type="tel" name="sub_school_phone[]" placeholder="Enter your contact phone" class="form-control" style="font-size:0.9rem;">
+                                <input type="tel" name="sub_school_phone[]" placeholder="Enter your Contact Phone" class="form-control" style="font-size:0.9rem;">
                             </div>
                             <div style="padding-top:1.2rem;">
                                 <button type="button" onclick="removeSubSchoolRow(this)" class="btn btn-outline btn-sm" style="color:#DC2626; border-color:#FCA5A5; padding:0.4rem 0.65rem;" title="Remove this sub-school">
@@ -706,19 +706,19 @@ function addSubSchoolRow() {
         <input type="hidden" name="sub_school_id[]" value="0">
         <div>
             <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Individual School Name *</label>
-            <input type="text" name="sub_school_name[]" required placeholder="Enter your school name" class="form-control" style="font-size:0.9rem;">
+            <input type="text" name="sub_school_name[]" required placeholder="Enter your School Name" class="form-control" style="font-size:0.9rem;">
         </div>
         <div>
             <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Code (3 Letters)</label>
-            <input type="text" name="sub_school_code[]" placeholder="e.g. GPS" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+            <input type="text" name="sub_school_code[]" placeholder="Enter your School Code" maxlength="3" class="form-control" style="font-size:0.9rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
         </div>
         <div>
             <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Campus / Board / Location</label>
-            <input type="text" name="sub_school_location[]" placeholder="Enter your campus location" class="form-control" style="font-size:0.9rem;">
+            <input type="text" name="sub_school_location[]" placeholder="Enter your Campus Location" class="form-control" style="font-size:0.9rem;">
         </div>
         <div>
             <label style="font-size:0.75rem; font-weight:700; color:#475569; display:block; margin-bottom:0.25rem;">Contact Phone</label>
-            <input type="tel" name="sub_school_phone[]" placeholder="Enter your contact phone" class="form-control" style="font-size:0.9rem;">
+            <input type="tel" name="sub_school_phone[]" placeholder="Enter your Contact Phone" class="form-control" style="font-size:0.9rem;">
         </div>
         <div style="padding-top:1.2rem;">
             <button type="button" onclick="removeSubSchoolRow(this)" class="btn btn-outline btn-sm" style="color:#DC2626; border-color:#FCA5A5; padding:0.4rem 0.65rem;" title="Remove this sub-school">
@@ -755,7 +755,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
     <form action="" method="GET" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin:0;">
         <!-- Main Schools Filter -->
         <select name="school_id" id="schools_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:140px;" onchange="handleMainSchoolDirectoryChange(this)">
-            <option value="">All Schools</option>
+            <option value="">Select School</option>
             <?php foreach ($mainSchools as $s): ?>
                 <option value="<?= $s['id'] ?>" data-has-subs="<?= (int)$s['has_sub_schools'] ?>" <?= $schoolFilter === (int)$s['id'] ? 'selected' : '' ?>>
                     <?= sanitize($s['name']) ?>
@@ -765,7 +765,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
 
         <!-- Under Schools Filter -->
         <select name="sub_school_id" id="schools_sub_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:145px;" onchange="this.form.submit()" <?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'disabled' : '' ?>>
-            <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'All Under Schools' ?></option>
+            <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'Select Under School' ?></option>
             <?php foreach ($underSchools as $sub): ?>
                 <?php 
                     if ($schoolFilter > 0 && (int)$sub['parent_id'] !== $schoolFilter) {
@@ -778,7 +778,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
             <?php endforeach; ?>
         </select>
 
-        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Search school name…" class="form-control" style="padding:0.35rem 0.55rem; font-size:0.82rem; width:160px; border-radius:var(--radius-md);">
+        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your School Name" class="form-control" style="padding:0.35rem 0.55rem; font-size:0.82rem; width:160px; border-radius:var(--radius-md);">
         <button type="submit" class="btn btn-primary btn-sm" style="padding:0.35rem 0.75rem; font-size:0.8rem;">Filter</button>
         <?php if (!empty($search) || $schoolFilter > 0 || $subSchoolFilter > 0): ?>
             <a href="<?= BASE_URL ?>/admin/schools.php" class="btn btn-outline btn-sm" style="padding:0.35rem 0.65rem; font-size:0.8rem;">Reset</a>
@@ -1030,19 +1030,19 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                 <div style="display:grid; grid-template-columns: 1.5fr 0.8fr 1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Name *</label>
-                        <input type="text" name="single_name" id="sem-single-name" placeholder="Enter your school name" class="form-control">
+                        <input type="text" name="single_name" id="sem-single-name" placeholder="Enter your School Name" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Code (3 Letters) *</label>
-                        <input type="text" name="single_code" id="sem-single-code" placeholder="e.g. TIN" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+                        <input type="text" name="single_code" id="sem-single-code" placeholder="Enter your School Code" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Campus Location</label>
-                        <input type="text" name="single_location" id="sem-single-location" placeholder="Enter your campus location" class="form-control">
+                        <input type="text" name="single_location" id="sem-single-location" placeholder="Enter your Campus Location" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Contact Phone</label>
-                        <input type="tel" name="single_contact_phone" id="sem-single-phone" placeholder="Enter your contact phone" class="form-control">
+                        <input type="tel" name="single_contact_phone" id="sem-single-phone" placeholder="Enter your Contact Phone" class="form-control">
                     </div>
                 </div>
             </div>
@@ -1056,19 +1056,19 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                 <div style="display:grid; grid-template-columns: 1.5fr 0.8fr 1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Sub-School / Campus Name *</label>
-                        <input type="text" name="sub_single_name" id="sem-subsingle-name" placeholder="Enter your school name" class="form-control">
+                        <input type="text" name="sub_single_name" id="sem-subsingle-name" placeholder="Enter your School Name" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Code (3 Letters) *</label>
-                        <input type="text" name="sub_single_code" id="sem-subsingle-code" placeholder="e.g. GPS" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+                        <input type="text" name="sub_single_code" id="sem-subsingle-code" placeholder="Enter your School Code" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Campus Location / Board</label>
-                        <input type="text" name="sub_single_location" id="sem-subsingle-location" placeholder="Enter your campus location" class="form-control">
+                        <input type="text" name="sub_single_location" id="sem-subsingle-location" placeholder="Enter your Campus Location" class="form-control">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Contact Phone</label>
-                        <input type="tel" name="sub_single_contact_phone" id="sem-subsingle-phone" placeholder="Enter your contact phone" class="form-control">
+                        <input type="tel" name="sub_single_contact_phone" id="sem-subsingle-phone" placeholder="Enter your Contact Phone" class="form-control">
                     </div>
                 </div>
             </div>
@@ -1078,7 +1078,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                 <div style="margin-bottom:1.25rem; max-width:650px;">
                     <div class="form-group" style="margin:0;">
                         <label class="form-label" style="font-weight:700;">Common School Name *</label>
-                        <input type="text" name="multi_name" id="sem-multi-name" placeholder="Enter your school name" class="form-control">
+                        <input type="text" name="multi_name" id="sem-multi-name" placeholder="Enter your School Name" class="form-control">
                     </div>
                 </div>
 
@@ -1093,7 +1093,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                     <div id="custom-unit-box-edit" style="display:none; margin-top:0.5rem;">
                         <div style="display:flex; align-items:center; gap:0.4rem;">
                             <span style="font-size:0.85rem; font-weight:700; color:#475569; white-space:nowrap;">Select</span>
-                            <input type="text" name="sub_school_label" id="input_sub_school_label_edit" placeholder="Enter label (e.g. Campus, Branch)" class="form-control" style="font-size:0.85rem; padding:0.35rem 0.65rem; height:auto; max-width:320px;">
+                            <input type="text" name="sub_school_label" id="input_sub_school_label_edit" placeholder="Enter your Sub-School Label" class="form-control" style="font-size:0.85rem; padding:0.35rem 0.65rem; height:auto; max-width:320px;">
                         </div>
                         <div style="font-size:0.75rem; color:#94A3B8; margin-top:0.25rem;">Visible on public site order page: Select &quot;&lt;your text&gt;&quot;</div>
                     </div>
@@ -1375,19 +1375,19 @@ function semRenderSubSchoolRow(container, id, name, code, location, phone) {
         <input type="hidden" name="sub_school_id[]" value="${id}">
         <div>
             <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:0.2rem;">Individual School Name *</label>
-            <input type="text" name="sub_school_name[]" value="${name ? name.replace(/"/g, '&quot;') : ''}" required placeholder="Enter school name" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
+            <input type="text" name="sub_school_name[]" value="${name ? name.replace(/"/g, '&quot;') : ''}" required placeholder="Enter your School Name" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
         </div>
         <div>
             <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:0.2rem;">Code (3 Letters)</label>
-            <input type="text" name="sub_school_code[]" value="${code ? code.replace(/"/g, '&quot;') : ''}" maxlength="3" placeholder="e.g. GPS" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
+            <input type="text" name="sub_school_code[]" value="${code ? code.replace(/"/g, '&quot;') : ''}" maxlength="3" placeholder="Enter your School Code" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem; text-transform:uppercase; font-weight:700;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
         </div>
         <div>
             <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:0.2rem;">Location / Board</label>
-            <input type="text" name="sub_school_location[]" value="${location ? location.replace(/"/g, '&quot;') : ''}" placeholder="Enter campus location" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
+            <input type="text" name="sub_school_location[]" value="${location ? location.replace(/"/g, '&quot;') : ''}" placeholder="Enter your Campus Location" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
         </div>
         <div>
             <label style="font-size:0.72rem; font-weight:700; color:#475569; display:block; margin-bottom:0.2rem;">Contact Phone</label>
-            <input type="tel" name="sub_school_phone[]" value="${phone ? phone.replace(/"/g, '&quot;') : ''}" placeholder="Enter contact phone" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
+            <input type="tel" name="sub_school_phone[]" value="${phone ? phone.replace(/"/g, '&quot;') : ''}" placeholder="Enter your Contact Phone" class="form-control" style="font-size:0.85rem; padding:0.4rem 0.6rem;">
         </div>
         <div style="padding-top:1rem;">
             <button type="button" onclick="semRemoveSubSchoolRow(this)" class="btn btn-outline btn-sm" style="color:#DC2626; border-color:#FCA5A5; padding:0.35rem 0.55rem; font-size:0.75rem;" title="Remove this sub-school">

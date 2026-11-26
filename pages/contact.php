@@ -81,25 +81,25 @@ require_once dirname(__DIR__) . '/includes/header.php';
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                     <div class="form-group">
                         <label class="form-label">Full Name *</label>
-                        <input type="text" name="name" required class="form-control" placeholder="Your Name">
+                        <input type="text" name="name" required class="form-control" placeholder="Enter your Full Name">
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                         <div class="form-group">
                             <label class="form-label">Email Address *</label>
-                            <input type="email" name="email" required class="form-control" placeholder="you@domain.com">
+                            <input type="email" name="email" required class="form-control" placeholder="Enter your Email Address">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Contact Phone</label>
-                            <input type="tel" name="phone" class="form-control" placeholder="+91 00000 00000">
+                            <input type="tel" name="phone" class="form-control" placeholder="Enter your Phone Number">
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Subject</label>
-                        <input type="text" name="subject" class="form-control" placeholder="School Uniform Proposal / Order Query">
+                        <input type="text" name="subject" class="form-control" placeholder="Enter your Subject">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Message *</label>
-                        <textarea name="message" required class="form-control" placeholder="How can we assist you?"></textarea>
+                        <textarea name="message" required class="form-control" placeholder="Enter your Message"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;">Transmit Message</button>
                 </form>

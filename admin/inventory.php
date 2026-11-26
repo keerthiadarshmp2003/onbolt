@@ -63,7 +63,7 @@ $variants = $pdo->query($sql)->fetchAll();
         <label style="font-weight:800; font-size:0.95rem;">Filter by Product:</label>
         <form action="" method="GET">
             <select name="product_id" class="form-control" style="width:280px;" onchange="this.form.submit()">
-                <option value="0">All Products</option>
+                <option value="0">Select Product</option>
                 <?php foreach ($products as $p): ?>
                     <option value="<?= $p['id'] ?>" <?= $prodFilter === (int)$p['id'] ? 'selected' : '' ?>><?= sanitize($p['name']) ?></option>
                 <?php endforeach; ?>

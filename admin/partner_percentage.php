@@ -536,7 +536,7 @@ require_once __DIR__ . '/header.php';
         <form id="pp-filter-form" action="" method="GET" style="margin:0; display:inline-flex; align-items:center; gap:0.5rem; flex-wrap:nowrap; flex-shrink:0;">
             <!-- Main Schools Filter -->
             <select name="school_id" id="pp_school_id_select" class="form-control" style="font-size:0.83rem; height:38px; padding:0.42rem 0.65rem; border-radius:var(--radius-md); width:160px; font-weight:600;" onchange="handleMainSchoolFilterChange(this)" title="Filter by Main School">
-                <option value="">All Schools</option>
+                <option value="">Select School</option>
                 <?php foreach ($mainSchools as $s): ?>
                     <option value="<?= $s['id'] ?>" data-has-subs="<?= (int)$s['has_sub_schools'] ?>" <?= $schoolFilter === (int)$s['id'] ? 'selected' : '' ?>>
                         <?= sanitize($s['name']) ?>
@@ -546,7 +546,7 @@ require_once __DIR__ . '/header.php';
 
             <!-- Under Schools Filter -->
             <select name="sub_school_id" id="pp_sub_school_id_select" class="form-control" style="font-size:0.83rem; height:38px; padding:0.42rem 0.65rem; border-radius:var(--radius-md); width:165px; font-weight:600;" onchange="this.form.submit()" <?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'disabled' : '' ?> title="Filter by Under School">
-                <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'All Under Schools' ?></option>
+                <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'Select Under School' ?></option>
                 <?php foreach ($underSchools as $sub): ?>
                     <?php 
                         if ($schoolFilter > 0 && (int)$sub['parent_id'] !== $schoolFilter) {

@@ -122,12 +122,12 @@ $items = $pdo->query("SELECT * FROM portfolio ORDER BY sort_order ASC, id DESC")
 
             <div class="form-group">
                 <label class="form-label">Project Title *</label>
-                <input type="text" name="title" required class="form-control" placeholder="e.g. Oxford Public School Uniform Suite">
+                <input type="text" name="title" required class="form-control" placeholder="Enter your Project Title">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Client Name / School *</label>
-                <input type="text" name="client_name" required class="form-control" placeholder="Oxford Public School">
+                <input type="text" name="client_name" required class="form-control" placeholder="Enter your Client / School Name">
             </div>
 
             <div class="form-group">
@@ -143,7 +143,7 @@ $items = $pdo->query("SELECT * FROM portfolio ORDER BY sort_order ASC, id DESC")
 
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" placeholder="Bespoke tailored uniform collection."></textarea>
+                <textarea name="description" class="form-control" placeholder="Enter your Project Description"></textarea>
             </div>
 
             <div class="form-group">

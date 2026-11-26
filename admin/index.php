@@ -156,7 +156,7 @@ $recentOrders = $pdo->query($recentOrdersSql)->fetchAll();
             <form action="" method="GET" style="display:flex; gap:0.4rem; align-items:center; flex-wrap:wrap; margin:0;">
                 <!-- Main Schools Filter -->
                 <select name="school_id" id="dash_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:140px;" onchange="handleMainSchoolDashChange(this)">
-                    <option value="">All Schools</option>
+                    <option value="">Select School</option>
                     <?php foreach ($mainSchools as $s): ?>
                         <option value="<?= $s['id'] ?>" data-has-subs="<?= (int)$s['has_sub_schools'] ?>" <?= $schoolFilter === (int)$s['id'] ? 'selected' : '' ?>>
                             <?= sanitize($s['name']) ?>
@@ -166,7 +166,7 @@ $recentOrders = $pdo->query($recentOrdersSql)->fetchAll();
 
                 <!-- Under Schools Filter -->
                 <select name="sub_school_id" id="dash_sub_school_id_select" class="form-control" style="font-size:0.82rem; padding:0.35rem 0.65rem; border-radius:var(--radius-md); width:145px;" onchange="this.form.submit()" <?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'disabled' : '' ?>>
-                    <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'All Under Schools' ?></option>
+                    <option value=""><?= ($schoolFilter > 0 && !$selectedMainHasSubs) ? 'No Under Schools' : 'Select Under School' ?></option>
                     <?php foreach ($underSchools as $sub): ?>
                         <?php 
                             if ($schoolFilter > 0 && (int)$sub['parent_id'] !== $schoolFilter) {

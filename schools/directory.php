@@ -32,7 +32,7 @@ require_once __DIR__ . '/../includes/header.php';
             <!-- Instant Search Input -->
             <div style="width:100%; max-width:380px;">
                 <div style="position:relative;">
-                    <input type="text" id="school-search-box" placeholder="Search school name or location…" class="form-control" style="padding-left:2.75rem; border-radius:var(--radius-pill); box-shadow:var(--shadow-sm);">
+                    <input type="text" id="school-search-box" placeholder="Enter your School Name or Location" class="form-control" style="padding-left:2.75rem; border-radius:var(--radius-pill); box-shadow:var(--shadow-sm);">
                     <svg style="position:absolute; left:1rem; top:50%; transform:translateY(-50%); color:var(--brand-muted);" width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
                         <circle cx="11" cy="11" r="8"></circle>
                         <line x1="21" y1="21" x2="16.65" y2="16.65"></line>

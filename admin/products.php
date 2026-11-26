@@ -652,13 +652,13 @@ $schoolUniforms = $stmtUniforms->fetchAll();
         <div style="display:grid; grid-template-columns: 2fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
             <div class="form-group">
                 <label class="form-label">Uniform Item Name *</label>
-                <input type="text" name="name" required value="<?= sanitize($editProduct['name'] ?? '') ?>" placeholder="Enter uniform item name (e.g. Polo Shirt, Track Pants, Blazer)" class="form-control">
+                <input type="text" name="name" required value="<?= sanitize($editProduct['name'] ?? '') ?>" placeholder="Enter your Uniform Item Name" class="form-control">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Category</label>
                 <select name="category_id" class="form-control" required>
-                    <option value="" disabled <?= empty($editProduct['category_id']) ? 'selected' : '' ?>>Select item category</option>
+                    <option value="" disabled <?= empty($editProduct['category_id']) ? 'selected' : '' ?>>Select Category</option>
                     <?php foreach ($categories as $cat): ?>
                         <option value="<?= $cat['id'] ?>" <?= (!empty($editProduct['category_id']) && $editProduct['category_id'] == $cat['id']) ? 'selected' : '' ?>>
                             <?= sanitize($cat['name']) ?>
@@ -678,14 +678,14 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                     <label class="form-label" style="font-weight:700; font-size:0.82rem;">1. Actual Price (₹) *</label>
                     <input type="number" step="0.01" name="actual_price" id="form-actual-price" required 
                            value="<?= isset($editProduct['actual_price']) ? sanitize((string)$editProduct['actual_price']) : (isset($editProduct['vendor_price']) ? sanitize((string)$editProduct['vendor_price']) : '') ?>" 
-                           class="form-control" placeholder="Base cost of item" oninput="calcProductTotal()">
+                           class="form-control" placeholder="Enter your Actual Price" oninput="calcProductTotal()">
                 </div>
 
                 <div class="form-group" style="margin:0;">
                     <label class="form-label" style="font-weight:700; font-size:0.82rem;">2. Vendor Commission (₹) *</label>
                     <input type="number" step="0.01" name="vendor_commission" id="form-vendor-commission" required 
                            value="<?= isset($editProduct['vendor_commission']) ? sanitize((string)$editProduct['vendor_commission']) : '' ?>" 
-                           class="form-control" placeholder="Vendor commission" oninput="calcProductTotal()">
+                           class="form-control" placeholder="Enter your Vendor Commission" oninput="calcProductTotal()">
                 </div>
 
                 <div class="form-group" style="margin:0;">
@@ -697,7 +697,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
 
                 <div class="form-group" style="margin:0;">
                     <label class="form-label" style="font-weight:700; font-size:0.82rem;">Available Sizes</label>
-                    <input type="text" name="available_sizes" value="<?= sanitize($editProduct['available_sizes'] ?? '') ?>" placeholder="e.g. 28, 30, 32" class="form-control">
+                    <input type="text" name="available_sizes" value="<?= sanitize($editProduct['available_sizes'] ?? '') ?>" placeholder="Enter your Available Sizes" class="form-control">
                 </div>
             </div>
             <div style="font-size:0.75rem; color:var(--brand-muted); margin-top:0.6rem;">
@@ -754,13 +754,13 @@ $schoolUniforms = $stmtUniforms->fetchAll();
         <input type="hidden" name="school_id" value="<?= $selectedSchoolId ?>">
 
         <select name="category" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:160px;" onchange="this.form.submit()">
-            <option value="0">All Categories</option>
+            <option value="0">Select Category</option>
             <?php foreach ($categories as $c): ?>
                 <option value="<?= $c['id'] ?>" <?= $catFilter === (int)$c['id'] ? 'selected' : '' ?>><?= sanitize($c['name']) ?></option>
             <?php endforeach; ?>
         </select>
 
-        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Search uniform name…" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;">
+        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Uniform Name" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;">
         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
         <?php if ($catFilter > 0 || !empty($search)): ?>
             <a href="<?= BASE_URL ?>/admin/products.php?school_id=<?= $selectedSchoolId ?>" class="btn btn-outline btn-sm">Reset</a>

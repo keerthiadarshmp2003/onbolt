@@ -196,6 +196,7 @@ require_once __DIR__ . '/../includes/header.php';
                                 <div style="margin-bottom:0.75rem;">
                                     <label style="font-size:0.75rem; font-weight:700; color:var(--brand-muted); display:block; margin-bottom:0.25rem;">Select Size:</label>
                                     <select name="size" required class="form-control" style="padding:0.4rem 0.75rem; font-size:0.85rem;">
+                                        <option value="" disabled selected>Select Size</option>
                                         <?php if (!empty($prod['variants'])): ?>
                                             <?php foreach ($prod['variants'] as $v): ?>
                                                 <option value="<?= sanitize($v['size']) ?>">Size <?= sanitize($v['size']) ?></option>

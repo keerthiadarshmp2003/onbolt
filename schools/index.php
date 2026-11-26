@@ -248,7 +248,7 @@ require_once __DIR__ . '/../includes/header.php';
             <div style="position: absolute; left: 18px; top: 50%; transform: translateY(-50%); color: #9CA3AF; pointer-events: none;">
                 <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
             </div>
-            <input type="text" id="schoolSearchInput" onkeyup="filterSchoolCards()" placeholder="Search school by name, board (CBSE, IB, CAIE), or keyword..." style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 9999px; border: 1.5px solid #E5E7EB; background: #ffffff; font-family: 'Urbanist', sans-serif; font-size: 15px; font-weight: 600; color: #111827; box-shadow: 0 4px 12px rgba(0,0,0,0.04); outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;">
+            <input type="text" id="schoolSearchInput" onkeyup="filterSchoolCards()" placeholder="Enter your School Name, Board, or Keyword" style="width: 100%; padding: 14px 20px 14px 48px; border-radius: 9999px; border: 1.5px solid #E5E7EB; background: #ffffff; font-family: 'Urbanist', sans-serif; font-size: 15px; font-weight: 600; color: #111827; box-shadow: 0 4px 12px rgba(0,0,0,0.04); outline: none; transition: border-color 0.2s ease, box-shadow 0.2s ease;">
         </div>
 
         <!-- School Cards Grid (Dynamically fetched top-level institutions based on Admin hierarchy) -->
@@ -336,7 +336,7 @@ document.addEventListener('DOMContentLoaded', function() {
 
             <form action="<?= BASE_URL ?>/api/newsletter.php" method="POST" class="ajax-newsletter-form" style="display:flex; gap:0.75rem; width:100%; max-width:440px;">
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                <input type="email" name="email" required placeholder="Enter your email" style="padding:0.9rem 1.25rem; border-radius:var(--radius-pill); border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#fff; font-size:0.92rem; flex-grow:1; outline:none; font-family:'Urbanist', sans-serif;">
+                <input type="email" name="email" required placeholder="Enter your Email Address" style="padding:0.9rem 1.25rem; border-radius:var(--radius-pill); border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#fff; font-size:0.92rem; flex-grow:1; outline:none; font-family:'Urbanist', sans-serif;">
                 <button type="submit" class="btn btn-primary" style="padding:0.9rem 1.75rem; font-family:'Urbanist', sans-serif; font-weight:700;">Subscribe</button>
             </form>
         </div>

@@ -99,7 +99,7 @@ $studentsList = $pdo->query($sql)->fetchAll();
             <h3 class="heading-2" style="font-size:1.3rem;">Active Student Roster (<?= count($studentsList) ?>)</h3>
             
             <form action="" method="GET" style="display:flex; gap:0.5rem;">
-                <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Search student/adm…" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:180px;">
+                <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Student Name or Admission Number" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:180px;">
                 <button type="submit" class="btn btn-primary btn-sm">Filter</button>
             </form>
         </div>
@@ -172,7 +172,7 @@ $studentsList = $pdo->query($sql)->fetchAll();
             <div class="form-group">
                 <label class="form-label">Parent Account *</label>
                 <select name="parent_id" required class="form-control">
-                    <option value="0">Select Existing Parent...</option>
+                    <option value="0">Select Parent</option>
                     <?php foreach ($parents as $p): ?>
                         <option value="<?= $p['id'] ?>"><?= sanitize($p['parent_name']) ?> (ID: <?= sanitize($p['login_id']) ?>)</option>
                     <?php endforeach; ?>
@@ -181,22 +181,22 @@ $studentsList = $pdo->query($sql)->fetchAll();
 
             <div class="form-group">
                 <label class="form-label">Admission Number *</label>
-                <input type="text" name="admission_no" required class="form-control" placeholder="e.g. TIS-ADM-809">
+                <input type="text" name="admission_no" required class="form-control" placeholder="Enter your Admission Number">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Student Full Name *</label>
-                <input type="text" name="student_name" required class="form-control" placeholder="Student Name">
+                <input type="text" name="student_name" required class="form-control" placeholder="Enter your Student Name">
             </div>
 
             <div style="display:grid; grid-template-columns:1fr 1fr; gap:0.75rem;">
                 <div class="form-group">
                     <label class="form-label">Class / Grade *</label>
-                    <input type="text" name="grade_class" required class="form-control" placeholder="Class 5">
+                    <input type="text" name="grade_class" required class="form-control" placeholder="Enter your Class">
                 </div>
                 <div class="form-group">
                     <label class="form-label">Section</label>
-                    <input type="text" name="section" class="form-control" placeholder="A / B / C">
+                    <input type="text" name="section" class="form-control" placeholder="Enter your Section">
                 </div>
             </div>
 

@@ -68,7 +68,7 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
 
         <div class="form-group">
             <label class="form-label" for="username">Username</label>
-            <input type="text" id="username" name="username" required autofocus class="form-control" placeholder="Enter your username">
+            <input type="text" id="username" name="username" required autofocus class="form-control" placeholder="Enter your Username">
         </div>
 
         <div class="form-group">

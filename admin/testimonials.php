@@ -101,17 +101,17 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY id DESC")->fetc
 
             <div class="form-group">
                 <label class="form-label">Author Name *</label>
-                <input type="text" name="author_name" required class="form-control" placeholder="Dr. Alexander George">
+                <input type="text" name="author_name" required class="form-control" placeholder="Enter your Author Name">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Designation / Role</label>
-                <input type="text" name="role_title" class="form-control" placeholder="Principal / Administrator">
+                <input type="text" name="role_title" class="form-control" placeholder="Enter your Designation">
             </div>
 
             <div class="form-group">
                 <label class="form-label">School / Corporate Entity</label>
-                <input type="text" name="company_or_school" class="form-control" placeholder="Trivandrum International School">
+                <input type="text" name="company_or_school" class="form-control" placeholder="Enter your Institution / School Name">
             </div>
 
             <div class="form-group">
@@ -124,7 +124,7 @@ $testimonials = $pdo->query("SELECT * FROM testimonials ORDER BY id DESC")->fetc
 
             <div class="form-group">
                 <label class="form-label">Endorsement Text *</label>
-                <textarea name="review_text" required class="form-control" placeholder="Quote praising fabric durability, parent portal convenience, etc."></textarea>
+                <textarea name="review_text" required class="form-control" placeholder="Enter your Testimonial Quote"></textarea>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">

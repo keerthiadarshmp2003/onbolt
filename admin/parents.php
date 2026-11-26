@@ -88,7 +88,7 @@ $parentsList = $pdo->query($sql)->fetchAll();
             <h3 class="heading-2" style="font-size:1.3rem;">Authorized Parent Portals (<?= count($parentsList) ?>)</h3>
             
             <form action="" method="GET" style="display:flex; gap:0.5rem;">
-                <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Search Login ID/Phone…" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:180px;">
+                <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Login ID or Phone Number" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:180px;">
                 <button type="submit" class="btn btn-primary btn-sm">Filter</button>
             </form>
         </div>
@@ -156,27 +156,27 @@ $parentsList = $pdo->query($sql)->fetchAll();
 
             <div class="form-group">
                 <label class="form-label">Assigned Login ID *</label>
-                <input type="text" name="login_id" required class="form-control" placeholder="e.g. TIS202610" style="text-transform:uppercase; font-weight:700;">
+                <input type="text" name="login_id" required class="form-control" placeholder="Enter your Login ID" style="text-transform:uppercase; font-weight:700;">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Parent / Guardian Name *</label>
-                <input type="text" name="parent_name" required class="form-control" placeholder="Parent Full Name">
+                <input type="text" name="parent_name" required class="form-control" placeholder="Enter your Parent Full Name">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Primary Mobile Phone *</label>
-                <input type="tel" name="phone" required class="form-control" placeholder="+91 98470 00000">
+                <input type="tel" name="phone" required class="form-control" placeholder="Enter your Phone Number">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Email Address</label>
-                <input type="email" name="email" class="form-control" placeholder="parent@example.com">
+                <input type="email" name="email" class="form-control" placeholder="Enter your Email Address">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Residential Address</label>
-                <textarea name="address" class="form-control" placeholder="Flat/House No, Residential Area"></textarea>
+                <textarea name="address" class="form-control" placeholder="Enter your Residential Address"></textarea>
             </div>
 
             <button type="submit" class="btn btn-primary" style="width:100%; margin-top:1rem;">

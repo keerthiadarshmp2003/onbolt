@@ -1208,7 +1208,7 @@ require_once __DIR__ . '/header.php';
                     <div class="desk-form-group">
                         <label class="desk-label">Select Partner School *</label>
                         <select name="school_id" id="schoolSelect" class="desk-select" required onchange="handleSchoolChange(this.value)">
-                            <option value="">-- Choose Partner School --</option>
+                            <option value="">Select Partner School</option>
                             <?php foreach ($mainSchools as $ms): ?>
                                 <option value="<?= $ms['id'] ?>" data-code="<?= htmlspecialchars($ms['code']) ?>" data-hassub="<?= $ms['has_sub_schools'] ?>">
                                     <?= htmlspecialchars($ms['name']) ?> (<?= htmlspecialchars($ms['code'] ?: 'ID: ' . $ms['id']) ?>)
@@ -1221,7 +1221,7 @@ require_once __DIR__ . '/header.php';
                     <div class="desk-form-group" id="subSchoolGroup" style="display:none;">
                         <label class="desk-label" id="subSchoolLabel">Campus / Academic Unit</label>
                         <select name="sub_school_id" id="subSchoolSelect" class="desk-select" onchange="handleSubSchoolChange(this.value)">
-                            <option value="">-- Main Campus / All Units --</option>
+                            <option value="">Select Campus / Academic Unit</option>
                         </select>
                     </div>
                 </div>
@@ -1230,13 +1230,13 @@ require_once __DIR__ . '/header.php';
                     <!-- Student Full Name -->
                     <div class="desk-form-group">
                         <label class="desk-label">Student Full Name *</label>
-                        <input type="text" name="student_name" id="studentName" class="desk-input" placeholder="e.g. Rahul Sharma" required>
+                        <input type="text" name="student_name" id="studentName" class="desk-input" placeholder="Enter your Student Full Name" required>
                     </div>
 
                     <!-- Grade / Class -->
                     <div class="desk-form-group">
                         <label class="desk-label">Grade / Class *</label>
-                        <input type="text" name="grade_class" id="gradeClass" class="desk-input" placeholder="e.g. Grade 4-B / Class 1" required>
+                        <input type="text" name="grade_class" id="gradeClass" class="desk-input" placeholder="Enter your Grade / Class" required>
                     </div>
                 </div>
 
@@ -1260,13 +1260,13 @@ require_once __DIR__ . '/header.php';
                     <!-- Parent / Guardian Name -->
                     <div class="desk-form-group">
                         <label class="desk-label">Parent / Guardian Name</label>
-                        <input type="text" name="parent_name" id="parentName" class="desk-input" placeholder="e.g. Rajesh Sharma">
+                        <input type="text" name="parent_name" id="parentName" class="desk-input" placeholder="Enter your Parent / Guardian Name">
                     </div>
 
                     <!-- Parent Mobile Number -->
                     <div class="desk-form-group">
                         <label class="desk-label">Parent Mobile Number *</label>
-                        <input type="tel" name="mobile" id="parentMobile" class="desk-input" placeholder="10-digit mobile number" maxlength="10" required>
+                        <input type="tel" name="mobile" id="parentMobile" class="desk-input" placeholder="Enter your Parent Mobile Number" maxlength="10" required>
                     </div>
                 </div>
 
@@ -1275,7 +1275,7 @@ require_once __DIR__ . '/header.php';
                     <div class="desk-form-group">
                         <label class="desk-label">Fulfillment Handover Mode *</label>
                         <select name="fulfillment_type" id="fulfillmentType" class="desk-select" required onchange="handleFulfillmentChange(this.value)">
-                            <option value="" selected disabled>Select</option>
+                            <option value="" selected disabled>Select Fulfillment Handover Mode</option>
                             <option value="Counter">🏢 Immediate Counter Handover (Handed over now)</option>
                             <option value="Handover">🏫 School Campus Handover (Deliver to student at school)</option>
                             <option value="Courier">📦 Courier / Home Delivery (Ship to address)</option>
@@ -1284,7 +1284,7 @@ require_once __DIR__ . '/header.php';
 
                     <div class="desk-form-group" id="addressFieldWrap" style="display:none;">
                         <label class="desk-label">Delivery Address &amp; Pincode</label>
-                        <input type="text" name="delivery_address" id="deliveryAddress" class="desk-input" placeholder="Street Address, House No, Pincode">
+                        <input type="text" name="delivery_address" id="deliveryAddress" class="desk-input" placeholder="Enter your Delivery Address & Pincode">
                     </div>
                 </div>
             </div>
@@ -1299,7 +1299,7 @@ require_once __DIR__ . '/header.php';
 
                 <!-- Catalog Filter Bar -->
                 <div class="catalog-filter-bar">
-                    <input type="text" id="catalogSearchInput" placeholder="🔍 Search uniform by name or SKU..." class="desk-input" style="max-width:320px;" oninput="filterCatalogItems()">
+                    <input type="text" id="catalogSearchInput" placeholder="Enter your Uniform Name or SKU" class="desk-input" style="max-width:320px;" oninput="filterCatalogItems()">
                     <div style="display:flex; gap:0.4rem; flex-wrap:wrap;">
                         <button type="button" class="btn btn-outline btn-sm active-cat-pill" data-cat="" onclick="filterByCategory('', this)" style="border-radius:9999px; padding:0.25rem 0.75rem; font-size:0.78rem;">
                             All
@@ -1368,7 +1368,7 @@ require_once __DIR__ . '/header.php';
                     </div>
                     <div class="bill-row" style="align-items:center;">
                         <span style="color:#64748b;">Counter Discount (₹):</span>
-                        <input type="number" name="discount_amount" id="discountInput" class="desk-input" style="width:90px; padding:2px 6px; font-size:0.85rem; text-align:right;" value="0" min="0" step="any" oninput="calculateBillTotal()">
+                        <input type="number" name="discount_amount" id="discountInput" class="desk-input" placeholder="Enter your Counter Discount" style="width:90px; padding:2px 6px; font-size:0.85rem; text-align:right;" value="0" min="0" step="any" oninput="calculateBillTotal()">
                     </div>
                     <div class="bill-row">
                         <span style="color:#64748b;">Fulfillment Fee:</span>
@@ -1457,7 +1457,7 @@ function handleSchoolChange(schoolId) {
     const schoolBadge = document.getElementById('schoolBadge');
     const selOpt = document.querySelector('#schoolSelect option[value="' + schoolId + '"]');
 
-    subSelect.innerHTML = '<option value="">-- Main Campus / All Units --</option>';
+    subSelect.innerHTML = '<option value="">Select Campus / Academic Unit</option>';
 
     if (!schoolId) {
         subGroup.style.display = 'none';

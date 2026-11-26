@@ -81,7 +81,7 @@ $actualLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
                 <!-- Newsletter Form -->
                 <form action="<?= BASE_URL ?>/api/newsletter.php" method="POST" class="ajax-newsletter-form" style="display: flex; gap: 0.5rem;">
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                    <input type="email" name="email" required placeholder="Enter institutional email" style="padding: 0.65rem 0.9rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85rem; flex-grow: 1;">
+                    <input type="email" name="email" required placeholder="Enter your Email Address" style="padding: 0.65rem 0.9rem; border-radius: var(--radius-pill); border: 1px solid rgba(255,255,255,0.2); background: rgba(255,255,255,0.08); color: #fff; font-size: 0.85rem; flex-grow: 1;">
                     <button type="submit" class="btn btn-primary btn-sm" style="padding: 0.65rem 1.25rem;">Join</button>
                 </form>
             </div>

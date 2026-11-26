@@ -1648,7 +1648,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-grid-two-col" style="margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Student Full Name <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-student-name" class="form-control" placeholder="Enter student full name" required value="">
+                            <input type="text" id="input-student-name" class="form-control" placeholder="Enter your Student Full Name" required value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Gender <span style="color: var(--wizard-accent);">*</span></label>
@@ -1668,11 +1668,11 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-grid-two-col" style="margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Class <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-student-class" class="form-control" placeholder="Enter class (e.g. Class 5, Playgroup, LKG, UKG)" required value="">
+                            <input type="text" id="input-student-class" class="form-control" placeholder="Enter your Class" required value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Grade <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-student-grade" class="form-control" placeholder="Enter grade (e.g. Grade A, Section B, Grade 5)" required value="">
+                            <input type="text" id="input-student-grade" class="form-control" placeholder="Enter your Grade" required value="">
                         </div>
                     </div>
 
@@ -1683,11 +1683,11 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-grid-two-col" style="margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Parent / Guardian Name <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-parent-name" class="form-control" placeholder="Enter your name" required value="">
+                            <input type="text" id="input-parent-name" class="form-control" placeholder="Enter your Parent / Guardian Name" required value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Primary WhatsApp Number <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="tel" id="input-mobile" class="form-control" placeholder="Enter your WhatsApp number" required value="">
+                            <input type="tel" id="input-mobile" class="form-control" placeholder="Enter your WhatsApp Number" required value="">
                             <div style="font-size: 0.75rem; color: var(--wizard-muted); margin-top: 0.25rem;">Used for 1-click WhatsApp order verification and status notifications.</div>
                         </div>
                     </div>
@@ -1695,28 +1695,28 @@ require_once __DIR__ . '/../includes/header.php';
                     <div class="form-grid-two-col" style="margin-bottom: 1.5rem;">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Alternate Phone (Optional)</label>
-                            <input type="tel" id="input-alt-mobile" class="form-control" placeholder="Enter alternate phone number" value="">
+                            <input type="tel" id="input-alt-mobile" class="form-control" placeholder="Enter your Alternate Phone Number" value="">
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Parent Email Address <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="email" id="input-email" class="form-control" placeholder="Enter your email address" required value="">
+                            <input type="email" id="input-email" class="form-control" placeholder="Enter your Email Address" required value="">
                         </div>
                     </div>
 
                     <div class="form-group" style="margin-bottom: 1.5rem;">
                         <label class="form-label" style="font-weight: 700;">Delivery Address <span style="color: var(--wizard-accent);">*</span></label>
-                        <textarea id="input-address" class="form-control" rows="2" placeholder="Enter your delivery address" required></textarea>
+                        <textarea id="input-address" class="form-control" rows="2" placeholder="Enter your Delivery Address" required></textarea>
                     </div>
 
                     <div class="form-grid-two-col">
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">Pincode <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-pincode" class="form-control" placeholder="Enter 6-digit pincode" required maxlength="6" value="" oninput="validatePincode(this.value)">
+                            <input type="text" id="input-pincode" class="form-control" placeholder="Enter your Pincode" required maxlength="6" value="" oninput="validatePincode(this.value)">
                             <div id="pincode-validation-msg" class="pincode-validation-msg" style="display: none;"></div>
                         </div>
                         <div class="form-group">
                             <label class="form-label" style="font-weight: 700;">City / State <span style="color: var(--wizard-accent);">*</span></label>
-                            <input type="text" id="input-district-state" class="form-control" placeholder="Enter your city and state" required value="">
+                            <input type="text" id="input-district-state" class="form-control" placeholder="Enter your City / State" required value="">
                         </div>
                     </div>
                 </form>
@@ -2045,7 +2045,7 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-group" style="margin-bottom: 0;">
                     <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Or Enter UPI VPA ID</label>
-                    <input type="text" id="custom-upi-id" class="form-control" placeholder="username@okhdfcbank / mobile@ybl" style="font-size: 0.9rem; font-weight: 600;">
+                    <input type="text" id="custom-upi-id" class="form-control" placeholder="Enter your UPI VPA ID" style="font-size: 0.9rem; font-weight: 600;">
                     <span style="font-size: 0.75rem; color: #64748B; margin-top: 0.25rem; display: block;">Payment request will be sent to your UPI app for authorization.</span>
                 </div>
             </div>
@@ -2090,16 +2090,16 @@ require_once __DIR__ . '/../includes/header.php';
                 </div>
                 <div class="form-group" style="margin-bottom: 0.75rem;">
                     <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Card Number</label>
-                    <input type="text" id="gateway-card-num" class="form-control" placeholder="•••• •••• •••• ••••" maxlength="19" style="font-family: monospace; font-size: 0.95rem; font-weight: 700;">
+                    <input type="text" id="gateway-card-num" class="form-control" placeholder="Enter your Card Number" maxlength="19" style="font-family: monospace; font-size: 0.95rem; font-weight: 700;">
                 </div>
                 <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 0.75rem;">
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Valid Thru</label>
-                        <input type="text" id="gateway-card-exp" class="form-control" placeholder="MM/YY" maxlength="5" style="font-weight: 700;">
+                        <input type="text" id="gateway-card-exp" class="form-control" placeholder="Enter your Expiry Date (MM/YY)" maxlength="5" style="font-weight: 700;">
                     </div>
                     <div class="form-group" style="margin-bottom: 0;">
                         <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">CVV / CVC</label>
-                        <input type="password" id="gateway-card-cvv" class="form-control" placeholder="•••" maxlength="4" style="font-weight: 700;">
+                        <input type="password" id="gateway-card-cvv" class="form-control" placeholder="Enter your CVV" maxlength="4" style="font-weight: 700;">
                     </div>
                 </div>
             </div>
@@ -2109,6 +2109,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div class="form-group" style="margin-bottom: 0;">
                     <label class="form-label" style="font-size: 0.8rem; font-weight: 700;">Select Your Bank</label>
                     <select id="gateway-net-bank" class="form-control" style="font-weight: 700;" onchange="currentPayMethod = 'Net Banking (' + this.value + ')'">
+                        <option value="" disabled selected>Select Bank</option>
                         <option value="HDFC Bank" selected>HDFC Bank</option>
                         <option value="State Bank of India">State Bank of India (SBI)</option>
                         <option value="ICICI Bank">ICICI Bank</option>

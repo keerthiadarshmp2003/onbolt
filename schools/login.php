@@ -297,7 +297,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST') {
                        autofocus 
                        class="form-input" 
                        value="<?= htmlspecialchars($_POST['login_id'] ?? 'TRINS01') ?>"
-                       placeholder="Enter Login ID (e.g. TRINS01)" 
+                       placeholder="Enter your Login ID" 
                        autocomplete="off">
             </div>
 

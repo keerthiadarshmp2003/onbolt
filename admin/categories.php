@@ -129,17 +129,17 @@ $categories = $pdo->query("SELECT c.*, (SELECT COUNT(*) FROM products p WHERE p.
 
             <div class="form-group">
                 <label class="form-label">Category Name *</label>
-                <input type="text" name="name" required class="form-control" placeholder="e.g. Winter Uniforms &amp; Hoodies">
+                <input type="text" name="name" required class="form-control" placeholder="Enter your Category Name">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Slug</label>
-                <input type="text" name="slug" class="form-control" placeholder="winter-uniforms-hoodies">
+                <input type="text" name="slug" class="form-control" placeholder="Enter your Category Slug">
             </div>
 
             <div class="form-group">
                 <label class="form-label">Description</label>
-                <textarea name="description" class="form-control" placeholder="Institutional fleece hoodies, blazers, and thermal vests."></textarea>
+                <textarea name="description" class="form-control" placeholder="Enter your Category Description"></textarea>
             </div>
 
             <div class="form-group">

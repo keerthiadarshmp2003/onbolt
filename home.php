@@ -598,7 +598,7 @@ require_once __DIR__ . '/includes/header.php';
 
             <form action="<?= BASE_URL ?>/api/newsletter.php" method="POST" class="ajax-newsletter-form" style="display:flex; gap:0.75rem; width:100%; max-width:440px;">
                 <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
-                <input type="email" name="email" required placeholder="Enter institutional email address..." style="padding:0.9rem 1.25rem; border-radius:var(--radius-pill); border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#fff; font-size:0.92rem; flex-grow:1; outline:none;">
+                <input type="email" name="email" required placeholder="Enter your Email Address" style="padding:0.9rem 1.25rem; border-radius:var(--radius-pill); border:1.5px solid rgba(255,255,255,0.2); background:rgba(255,255,255,0.08); color:#fff; font-size:0.92rem; flex-grow:1; outline:none;">
                 <button type="submit" class="btn btn-primary" style="padding:0.9rem 1.75rem;">Subscribe</button>
             </form>
         </div>
@@ -639,25 +639,25 @@ require_once __DIR__ . '/includes/header.php';
                     <input type="hidden" name="csrf_token" value="<?= generateCsrfToken() ?>">
                     <div class="form-group">
                         <label class="form-label">Full Name / Designation *</label>
-                        <input type="text" name="name" required class="form-control" placeholder="Dr. Rajesh / Principal">
+                        <input type="text" name="name" required class="form-control" placeholder="Enter your Full Name / Designation">
                     </div>
                     <div class="form-group">
                         <label class="form-label">Institution / School Name *</label>
-                        <input type="text" name="subject" required class="form-control" placeholder="St. Mary's Academy">
+                        <input type="text" name="subject" required class="form-control" placeholder="Enter your Institution / School Name">
                     </div>
                     <div style="display:grid; grid-template-columns:1fr 1fr; gap:1rem;">
                         <div class="form-group">
                             <label class="form-label">Email Address *</label>
-                            <input type="email" name="email" required class="form-control" placeholder="admin@school.org">
+                            <input type="email" name="email" required class="form-control" placeholder="Enter your Email Address">
                         </div>
                         <div class="form-group">
                             <label class="form-label">Phone Number *</label>
-                            <input type="tel" name="phone" required class="form-control" placeholder="+91 98470 00000">
+                            <input type="tel" name="phone" required class="form-control" placeholder="Enter your Phone Number">
                         </div>
                     </div>
                     <div class="form-group">
                         <label class="form-label">Approximate Student Strength &amp; Requirements</label>
-                        <textarea name="message" required class="form-control" placeholder="We have 850 students from Grade 1 to 12. Looking for full kit samples for next academic year."></textarea>
+                        <textarea name="message" required class="form-control" placeholder="Enter your Student Strength & Requirements"></textarea>
                     </div>
                     <button type="submit" class="btn btn-primary" style="width:100%;">Submit Proposal Request</button>
                 </form>

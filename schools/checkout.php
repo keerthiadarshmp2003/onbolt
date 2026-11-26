@@ -264,23 +264,23 @@ require_once __DIR__ . '/../includes/header.php';
                     <div style="display:grid; grid-template-columns: 1fr 1fr; gap:1.25rem;">
                         <div class="form-group">
                             <label class="form-label">Alternate Phone (WhatsApp)</label>
-                            <input type="tel" name="alt_mobile" placeholder="+91 00000 00000" class="form-control">
+                            <input type="tel" name="alt_mobile" placeholder="Enter your Phone Number" class="form-control">
                         </div>
 
                         <div class="form-group">
                             <label class="form-label">Email Notification Address</label>
-                            <input type="email" name="email" value="<?= sanitize($parent['email'] ?? '') ?>" class="form-control" placeholder="parent@example.com">
+                            <input type="email" name="email" value="<?= sanitize($parent['email'] ?? '') ?>" class="form-control" placeholder="Enter your Email Address">
                         </div>
                     </div>
 
                     <div class="form-group">
                         <label class="form-label">Delivery Address / School Campus Pickup Instructions *</label>
-                        <textarea name="delivery_address" required class="form-control" placeholder="House/Flat No, Residential Street, or specify 'Collect at School Uniform Counter'">Villa 14, Green Valley Enclave, Kazhakkoottam</textarea>
+                        <textarea name="delivery_address" required class="form-control" placeholder="Enter your Delivery Address">Villa 14, Green Valley Enclave, Kazhakkoottam</textarea>
                     </div>
 
                     <div class="form-group" style="max-width:240px;">
                         <label class="form-label">Postal Pincode</label>
-                        <input type="text" name="pincode" placeholder="Enter 6-digit pincode" maxlength="6" class="form-control">
+                        <input type="text" name="pincode" placeholder="Enter your Pincode" maxlength="6" class="form-control">
                     </div>
 
                     <!-- 3. Payment Method -->

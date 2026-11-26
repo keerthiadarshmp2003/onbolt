@@ -292,7 +292,7 @@ require_once __DIR__ . '/header.php';
             </label>
             <div style="position: relative;">
                 <input type="text" name="search" value="<?= htmlspecialchars($searchMobile) ?>" 
-                       placeholder="Select" 
+                       placeholder="Enter your Mobile Number or Request ID" 
                        style="width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
                 <span style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 1rem;">📱</span>
             </div>
@@ -304,7 +304,7 @@ require_once __DIR__ . '/header.php';
                 Gateway Status
             </label>
             <select name="status" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="">Select</option>
+                <option value="">Select Gateway Status</option>
                 <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>⏳ Pending</option>
                 <option value="Failed" <?= $statusFilter === 'Failed' ? 'selected' : '' ?>>✕ Failed / Dropped</option>
             </select>
@@ -316,7 +316,7 @@ require_once __DIR__ . '/header.php';
                 School Filter
             </label>
             <select name="school_id" id="schoolSelect" onchange="updateSubSchools(this.value)" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="0">Select</option>
+                <option value="0">Select School</option>
                 <?php foreach ($mainSchools as $ms): ?>
                     <option value="<?= $ms['id'] ?>" <?= $schoolFilter === (int)$ms['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($ms['name']) ?>
@@ -331,7 +331,7 @@ require_once __DIR__ . '/header.php';
                 Sub-School / Campus
             </label>
             <select name="sub_school_id" id="subSchoolSelect" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="0">Select</option>
+                <option value="0">Select School</option>
                 <?php foreach ($underSchools as $sub): 
                     $matchParent = ($schoolFilter === 0 || (int)$sub['parent_id'] === $schoolFilter);
                 ?>
@@ -536,7 +536,8 @@ require_once __DIR__ . '/header.php';
                 <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 0.4rem;">
                     Payment Method Received <span style="color: #DC2626;">*</span>
                 </label>
-                <select name="payment_method" required style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #ffffff;">
+                <select name="payment_method" required
+                    <option value="" disabled selected>Select Payment Method</option> style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #ffffff;">
                     <option value="Cash">💵 Cash</option>
                     <option value="UPI" selected>📱 UPI</option>
                     <option value="Card">💳 Card</option>
@@ -550,7 +551,7 @@ require_once __DIR__ . '/header.php';
                 <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 0.4rem;">
                     Transaction Reference / UTR / Receipt No.
                 </label>
-                <input type="text" name="payment_reference" placeholder="e.g. UTR12345678, Cash Receipt #88..." 
+                <input type="text" name="payment_reference" placeholder="Enter your Payment Reference / Transaction ID" 
                        style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; color: #1E2530;">
             </div>
 
@@ -559,7 +560,7 @@ require_once __DIR__ . '/header.php';
                 <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 0.4rem;">
                     Admin Verification Note
                 </label>
-                <input type="text" name="admin_notes" placeholder="Optional notes for internal tracking..." 
+                <input type="text" name="admin_notes" placeholder="Enter your Internal Notes" 
                        style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; color: #1E2530;">
             </div>
 

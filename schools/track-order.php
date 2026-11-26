@@ -257,7 +257,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <label style="display:block; font-size:13px; font-weight:800; color:#1E293B; margin-bottom:8px;">
                     Order Reference Number *
                 </label>
-                <input type="text" name="ref" required value="<?= sanitize($orderRef) ?>" placeholder="Enter Your Order ID" class="track-order-input" style="width:100%; padding:13px 18px; border-radius:12px; border:1.5px solid #CBD5E1; font-weight:700; text-transform:uppercase; outline:none; font-size:15px; box-sizing:border-box;">
+                <input type="text" name="ref" required value="<?= sanitize($orderRef) ?>" placeholder="Enter your Order ID" class="track-order-input" style="width:100%; padding:13px 18px; border-radius:12px; border:1.5px solid #CBD5E1; font-weight:700; text-transform:uppercase; outline:none; font-size:15px; box-sizing:border-box;">
             </div>
 
             <div>
@@ -562,7 +562,7 @@ require_once __DIR__ . '/../includes/header.php';
                 <div>
                     <label style="display:block; font-size:13px; font-weight:700; color:#1E293B; margin-bottom:6px;">Required Size *</label>
                     <select name="requested_size" required style="width:100%; padding:10px 14px; border-radius:10px; border:1.5px solid #CBD5E1; font-weight:700; outline:none;">
-                        <option value="">Select New Size</option>
+                        <option value="">Select Size</option>
                         <option value="20">Size 20</option>
                         <option value="22">Size 22</option>
                         <option value="24">Size 24</option>
