@@ -444,10 +444,9 @@ require_once __DIR__ . '/header.php';
                 <th style="width: 130px;">Request ID</th>
                 <th style="width: 140px;">
                     <a href="?<?= http_build_query(array_merge($_GET, ['sort_date' => $sortDate === 'asc' ? 'desc' : 'asc'])) ?>" 
-                       style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" 
+                       style="color: inherit; text-decoration: none;" 
                        title="Sort by Date (Currently <?= $sortDate === 'asc' ? 'Oldest First - Click for Newest' : 'Newest First - Click for Oldest' ?>)">
                         Date
-                        <span style="font-size: 0.75rem; color: #EA580C; font-weight: 800;"><?= $sortDate === 'asc' ? '▲' : '▼' ?></span>
                     </a>
                 </th>
                 <th style="min-width: 160px;">Parent Name</th>
@@ -504,11 +503,6 @@ require_once __DIR__ . '/header.php';
                         <div style="font-weight: 700; color: #1E2530; font-size: 0.9rem;">
                             <?= htmlspecialchars($row['student_name'] ?: '—') ?>
                         </div>
-                        <?php if (!empty($row['grade_class'])): ?>
-                            <div style="font-size: 0.76rem; color: #64748B; margin-top: 2px;">
-                                Class: <strong><?= htmlspecialchars($row['grade_class']) ?></strong>
-                            </div>
-                        <?php endif; ?>
                     </td>
 
                     <!-- Phone Number -->
@@ -521,12 +515,12 @@ require_once __DIR__ . '/header.php';
                     <!-- Status -->
                     <td style="text-align: center; white-space: nowrap;">
                         <?php if ($pStatus === 'Failed'): ?>
-                            <span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
-                                <span>✕</span> <span>FAILED</span>
+                            <span style="display: inline-block; padding: 4px 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
+                                FAILED
                             </span>
                         <?php else: ?>
-                            <span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
-                                <span>⏳</span> <span>PENDING</span>
+                            <span style="display: inline-block; padding: 4px 10px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
+                                PENDING
                             </span>
                         <?php endif; ?>
                     </td>
@@ -789,12 +783,12 @@ window.openPendingDetailsModal = function(orderId) {
 
     const sb = document.getElementById('pdm-status-badge');
     if (d.status === 'Failed') {
-        sb.textContent = '✕ FAILED';
+        sb.textContent = 'FAILED';
         sb.style.background = '#FEF2F2';
         sb.style.color = '#DC2626';
         sb.style.border = '1px solid #FECACA';
     } else {
-        sb.textContent = '⏳ PENDING';
+        sb.textContent = 'PENDING';
         sb.style.background = '#FFFBEB';
         sb.style.color = '#D97706';
         sb.style.border = '1px solid #FDE68A';
