@@ -220,13 +220,13 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
         <div class="admin-nav-group-title">Core Management</div>
         <?php if (adminCan('dashboard_view')): ?>
         <a href="<?= BASE_URL ?>/admin/" class="admin-nav-item <?= empty($adminActive) || $adminActive === 'dashboard' ? 'active' : '' ?>">
-            <span>📊</span> Dashboard
+            Dashboard
         </a>
         <?php endif; ?>
 
         <?php if (adminCan('orders_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/orders.php" class="admin-nav-item <?= ($adminActive ?? '') === 'orders' ? 'active' : '' ?>">
-            <span>📦</span> Parent Purchases &amp; Messages
+            Orders
         </a>
         <?php endif; ?>
 
@@ -239,7 +239,7 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
         } catch (Throwable $e) {}
         ?>
         <a href="<?= BASE_URL ?>/admin/pending_transactions.php" class="admin-nav-item <?= ($adminActive ?? '') === 'pending_transactions' ? 'active' : '' ?>">
-            <span>⏳</span> Pending &amp; Failed Attempts
+            Issues
             <?php if ($navPendingCount > 0): ?>
                 <span style="margin-left: auto; background: #EF4444; color: #ffffff; font-size: 0.68rem; font-weight: 800; padding: 2px 7px; border-radius: 9999px; line-height: 1.2;"><?= $navPendingCount ?></span>
             <?php endif; ?>
@@ -248,44 +248,44 @@ $siteLogo = BASE_URL . '/assets/images/logo/onbolt-actual-logo.png';
 
         <?php if (adminCan('create_order_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/create_order.php" class="admin-nav-item <?= ($adminActive ?? '') === 'create_order' ? 'active' : '' ?>">
-            <span>🛍️</span> Create Walk-in Order
+            New Order
         </a>
         <?php endif; ?>
 
         <?php if (adminCan('partner_percentage_view')): ?>
         <a href="<?= BASE_URL ?>/admin/partner_percentage.php" class="admin-nav-item <?= ($adminActive ?? '') === 'partner_percentage' ? 'active' : '' ?>">
-            <span>💼</span> Partner Percentage
+            Partner Percentage
         </a>
         <?php endif; ?>
 
         <?php if (adminCan('schools_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/schools.php" class="admin-nav-item <?= ($adminActive ?? '') === 'schools' ? 'active' : '' ?>">
-            <span>🏫</span> Schools Directory
+            Schools
         </a>
         <?php endif; ?>
 
         <?php if (adminCan('products_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/products.php" class="admin-nav-item <?= ($adminActive ?? '') === 'products' ? 'active' : '' ?>">
-            <span>👕</span> Uniforms &amp; Apparel
+            Products
         </a>
         <?php endif; ?>
 
         <?php if (adminCan('catalog_overview_view')): ?>
         <a href="<?= BASE_URL ?>/admin/catalog_overview.php" class="admin-nav-item <?= ($adminActive ?? '') === 'catalog_overview' ? 'active' : '' ?>">
-            <span>📋</span> Catalog Overview
+            Catalog
         </a>
         <?php endif; ?>
 
         <?php if (($admin['role_slug'] ?? '') === 'superadmin' || ($admin['role_id'] ?? 0) === 1 || adminCan('users_manage') || adminCan('privileges_manage')): ?>
-        <div class="admin-nav-group-title">Administration &amp; Access</div>
+        <div class="admin-nav-group-title">Admin Settings</div>
         <?php if (($admin['role_slug'] ?? '') === 'superadmin' || ($admin['role_id'] ?? 0) === 1 || adminCan('users_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/users.php" class="admin-nav-item <?= ($adminActive ?? '') === 'users' ? 'active' : '' ?>">
-            <span>👥</span> User Management
+            User Management
         </a>
         <?php endif; ?>
         <?php if (($admin['role_slug'] ?? '') === 'superadmin' || ($admin['role_id'] ?? 0) === 1 || adminCan('privileges_manage')): ?>
         <a href="<?= BASE_URL ?>/admin/privileges.php" class="admin-nav-item <?= ($adminActive ?? '') === 'privileges' ? 'active' : '' ?>">
-            <span>🛡️</span> Privilege Settings
+            Privilege Settings
         </a>
         <?php endif; ?>
         <?php endif; ?>
