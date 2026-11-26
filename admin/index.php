@@ -167,11 +167,16 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     data: [incomeVal, expenseVal, profitVal],
                     backgroundColor: [
-                        '#0F172A', // Dark Navy for Income
-                        '#EF4444', // Red/Coral for Expense
+                        '#FF6702', // OnBolt Electric Bolt Orange for Income
+                        '#EF4444', // Red for Expense
                         '#10B981'  // Emerald Green for Profit
                     ],
-                    borderRadius: 4,
+                    hoverBackgroundColor: [
+                        '#E55A00',
+                        '#DC2626',
+                        '#059669'
+                    ],
+                    borderRadius: 6,
                     borderSkipped: false,
                     maxBarThickness: 55,
                     barPercentage: 0.6
@@ -252,10 +257,18 @@ document.addEventListener('DOMContentLoaded', function() {
                 datasets: [{
                     data: counts,
                     backgroundColor: [
-                        '#0F172A', // Dark navy
-                        '#2563EB', // Blue
-                        '#FF6702', // Orange (if extra school)
-                        '#10B981'  // Green (if extra school)
+                        '#FF6702', // OnBolt Primary Brand Orange
+                        '#1E2530', // OnBolt Graphite Dark Charcoal
+                        '#F59E0B', // Warm Amber
+                        '#10B981', // Emerald Green
+                        '#64748B'  // Muted Slate
+                    ],
+                    hoverBackgroundColor: [
+                        '#E55A00',
+                        '#2B3444',
+                        '#D97706',
+                        '#059669',
+                        '#475569'
                     ],
                     borderWidth: 0,
                     hoverOffset: 4
