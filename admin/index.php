@@ -7,7 +7,7 @@
 declare(strict_types=1);
 
 $adminActive = 'dashboard';
-$adminTitle = 'Operations & Parent Purchases Overview';
+$adminTitle = 'Dashboard';
 require_once __DIR__ . '/header.php';
 
 if (!adminCan('dashboard_view')) {
@@ -55,45 +55,33 @@ $totalRevenue = (float)$pdo->query("SELECT COALESCE(SUM(total_amount), 0) FROM o
 </div>
 
 <!-- Quick Action Shortcuts -->
-<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(280px, 1fr)); gap:1.25rem; margin-bottom:1rem;">
-    <a href="<?= BASE_URL ?>/admin/orders.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
-        <div style="width:50px; height:50px; border-radius:50%; background:rgba(255,103,2,0.1); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+<div style="display:grid; grid-template-columns: repeat(auto-fit, minmax(240px, 1fr)); gap:1.25rem; margin-bottom:1rem;">
+    <a href="<?= BASE_URL ?>/admin/orders.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,103,2,0.1); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
             📦
         </div>
-        <div>
-            <div style="font-weight:800; font-size:1.05rem; color:var(--brand-dark);">Manage Purchases &amp; Messages</div>
-            <div style="font-size:0.8rem; color:var(--brand-muted); margin-top:0.2rem;">View items, order status, and send WhatsApp/SMS updates</div>
-        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:var(--brand-dark);">Orders</div>
     </a>
 
-    <a href="<?= BASE_URL ?>/admin/create_order.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1.5px solid #FED7AA; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
-        <div style="width:50px; height:50px; border-radius:50%; background:rgba(255,103,2,0.12); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+    <a href="<?= BASE_URL ?>/admin/create_order.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; border:1.5px solid #FED7AA; box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(255,103,2,0.12); color:var(--brand-primary); display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
             🛍️
         </div>
-        <div>
-            <div style="font-weight:800; font-size:1.05rem; color:var(--brand-dark);">Create Walk-in Order</div>
-            <div style="font-size:0.8rem; color:var(--brand-muted); margin-top:0.2rem;">Counter desk for parents ordering or paying in person</div>
-        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:var(--brand-dark);">New Order</div>
     </a>
 
-    <a href="<?= BASE_URL ?>/admin/schools.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
-        <div style="width:50px; height:50px; border-radius:50%; background:rgba(37,99,235,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+    <a href="<?= BASE_URL ?>/admin/schools.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(37,99,235,0.1); color:#2563eb; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
             🏫
         </div>
-        <div>
-            <div style="font-weight:800; font-size:1.05rem; color:var(--brand-dark);">Upload Partner School</div>
-            <div style="font-size:0.8rem; color:var(--brand-muted); margin-top:0.2rem;">Register school with logo &amp; banner (Max 500 KB limit)</div>
-        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:var(--brand-dark);">Schools</div>
     </a>
 
-    <a href="<?= BASE_URL ?>/admin/products.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
-        <div style="width:50px; height:50px; border-radius:50%; background:rgba(22,163,74,0.1); color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.5rem; flex-shrink:0;">
+    <a href="<?= BASE_URL ?>/admin/products.php" style="background:#ffffff; border-radius:var(--radius-lg); padding:1.25rem 1.5rem; border:1px solid var(--brand-border); box-shadow:var(--shadow-sm); display:flex; align-items:center; gap:1.25rem; text-decoration:none; color:inherit; transition:transform 0.2s ease;">
+        <div style="width:48px; height:48px; border-radius:50%; background:rgba(22,163,74,0.1); color:#16a34a; display:flex; align-items:center; justify-content:center; font-size:1.4rem; flex-shrink:0;">
             👕
         </div>
-        <div>
-            <div style="font-weight:800; font-size:1.05rem; color:var(--brand-dark);">Upload Uniform Product</div>
-            <div style="font-size:0.8rem; color:var(--brand-muted); margin-top:0.2rem;">Add uniforms, sizes, and photography (Max 500 KB limit)</div>
-        </div>
+        <div style="font-weight:800; font-size:1.1rem; color:var(--brand-dark);">Products</div>
     </a>
 </div>
 
