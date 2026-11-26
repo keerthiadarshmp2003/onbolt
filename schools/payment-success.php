@@ -393,9 +393,16 @@ require_once __DIR__ . '/../includes/header.php';
                                 <div style="font-size: 0.75rem; color: #64748B;">Approved Pattern &bull; Institutional Stitch</div>
                             </td>
                             <td style="text-align: center;">
-                                <span style="background: #E2E8F0; padding: 0.2rem 0.55rem; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
-                                    <?= sanitize($item['size']) ?>
-                                </span>
+                                <?php 
+                                $cleanSz = strtolower(trim((string)($item['size'] ?? '')));
+                                if (!empty($cleanSz) && !in_array($cleanSz, ['standard', 'free', 'n/a', 'none', '-'])): 
+                                ?>
+                                    <span style="background: #E2E8F0; padding: 0.2rem 0.55rem; border-radius: 4px; font-weight: 800; font-size: 0.8rem;">
+                                        <?= sanitize($item['size']) ?>
+                                    </span>
+                                <?php else: ?>
+                                    <span style="color: #94A3B8; font-weight: 700;">&mdash;</span>
+                                <?php endif; ?>
                             </td>
                             <td style="text-align: center; font-weight: 800; color: #1E2530;">
                                 <?= (int)$item['quantity'] ?>

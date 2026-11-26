@@ -1428,6 +1428,9 @@ require_once __DIR__ . '/../includes/header.php';
             <?php
             // Helper function to render product cards
             $renderCard = function($prod) {
+                $grp = strtolower($prod['uniform_group'] ?? 'academic');
+                $isAccessory = ($grp === 'accessories') || preg_match('/\b(belt|socks|sock|cap|tie|bag|badge)\b/i', $prod['name']);
+                $needsSize = !$isAccessory && !empty($prod['available_sizes']) && trim($prod['available_sizes']) !== 'NONE';
             ?>
                 <div class="product-order-card" 
                      id="card-prod-<?= $prod['id'] ?>" 
@@ -1437,7 +1440,8 @@ require_once __DIR__ . '/../includes/header.php';
                      data-product-image="<?= BASE_URL ?>/<?= sanitize($prod['featured_image']) ?>"
                      data-gender="<?= sanitize($prod['gender'] ?? 'all') ?>"
                      data-group="<?= sanitize($prod['uniform_group'] ?? 'academic') ?>"
-                     data-sizes="<?= sanitize($prod['available_sizes'] ?? '24,26,28,30,32,34,36') ?>">
+                     data-has-size="<?= $needsSize ? '1' : '0' ?>"
+                     data-sizes="<?= $needsSize ? sanitize($prod['available_sizes'] ?? '24,26,28,30,32,34,36') : '' ?>">
                     <div class="product-media-wrap">
                         <img src="<?= BASE_URL ?>/<?= sanitize($prod['featured_image']) ?>" alt="<?= sanitize($prod['name']) ?>" loading="lazy" decoding="async">
                     </div>
@@ -1451,10 +1455,12 @@ require_once __DIR__ . '/../includes/header.php';
                                     <span style="color:#D946EF; font-weight:800; margin-left:0.25rem;">(Girl)</span>
                                 <?php endif; ?>
                             </span>
+                            <?php if ($needsSize): ?>
                             <button type="button" class="size-chart-trigger-btn open-size-chart-btn" data-category="<?= sanitize($prod['category_name']) ?>" title="Inspect size diagram & body measurements">
                                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;"><path d="M2 12h20M7 12v-3M12 12v-5M17 12v-3"/><rect x="2" y="7" width="20" height="10" rx="2"/></svg>
                                 <span>Size Guide</span>
                             </button>
+                            <?php endif; ?>
                         </div>
 
                         <h3 class="product-item-title"><?= sanitize($prod['name']) ?></h3>
@@ -1469,23 +1475,27 @@ require_once __DIR__ . '/../includes/header.php';
 
                         <!-- Size & Quantity Configuration Drawer -->
                         <div class="product-configuration-panel">
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
-                                <span style="font-size: 0.75rem; font-weight: 800; color: var(--wizard-muted); text-transform: uppercase;">Available Sizes:</span>
-                                <span class="size-status-msg error" id="size-status-<?= $prod['id'] ?>" style="display: none;">Size didn't select</span>
-                            </div>
-                            <div class="size-pills-row">
-                                <?php 
-                                    $sizesArray = !empty($prod['available_sizes']) ? array_map('trim', explode(',', $prod['available_sizes'])) : ['24', '26', '28', '30', '32', '34', '36'];
-                                    foreach ($sizesArray as $sz): 
-                                ?>
-                                    <button type="button" class="size-chip" onclick="pickSize(<?= $prod['id'] ?>, '<?= sanitize($sz) ?>', this)">
-                                        <?= sanitize($sz) ?>
-                                    </button>
-                                <?php endforeach; ?>
-                            </div>
-                            <input type="hidden" id="selected-size-<?= $prod['id'] ?>" value="">
+                            <?php if ($needsSize): ?>
+                                <div style="display: flex; justify-content: space-between; align-items: center; margin-bottom: 0.35rem;">
+                                    <span style="font-size: 0.75rem; font-weight: 800; color: var(--wizard-muted); text-transform: uppercase;">Available Sizes:</span>
+                                    <span class="size-status-msg error" id="size-status-<?= $prod['id'] ?>" style="display: none;">Size didn't select</span>
+                                </div>
+                                <div class="size-pills-row">
+                                    <?php 
+                                        $sizesArray = !empty($prod['available_sizes']) ? array_map('trim', explode(',', $prod['available_sizes'])) : ['24', '26', '28', '30', '32', '34', '36'];
+                                        foreach ($sizesArray as $sz): 
+                                    ?>
+                                        <button type="button" class="size-chip" onclick="pickSize(<?= $prod['id'] ?>, '<?= sanitize($sz) ?>', this)">
+                                            <?= sanitize($sz) ?>
+                                        </button>
+                                    <?php endforeach; ?>
+                                </div>
+                                <input type="hidden" id="selected-size-<?= $prod['id'] ?>" value="">
+                            <?php else: ?>
+                                <input type="hidden" id="selected-size-<?= $prod['id'] ?>" value="">
+                            <?php endif; ?>
 
-                            <div style="display: flex; justify-content: space-between; align-items: center; margin-top: 0.75rem;">
+                            <div style="display: flex; justify-content: space-between; align-items: center; <?= $needsSize ? 'margin-top: 0.75rem;' : '' ?>">
                                 <span style="font-size: 0.75rem; font-weight: 800; color: var(--wizard-muted); text-transform: uppercase;">Quantity:</span>
                                 <div class="qty-stepper-box">
                                     <button type="button" class="stepper-btn" onclick="adjustProductQty(<?= $prod['id'] ?>, -1)">&minus;</button>
@@ -2266,12 +2276,14 @@ require_once __DIR__ . '/../includes/header.php';
                 return;
             }
 
-            // Enforce manual size selection for every selected item
+            // Enforce manual size selection for every selected item that requires sizes
             const missingSizeNames = [];
             for (const pid in state.selectedProducts) {
-                if (!state.selectedProducts[pid].size) {
-                    missingSizeNames.push(state.selectedProducts[pid].name);
-                    const card = document.getElementById('card-prod-' + pid);
+                const item = state.selectedProducts[pid];
+                const card = document.getElementById('card-prod-' + pid);
+                const hasSize = card ? (card.dataset.hasSize !== '0') : (item.hasSize !== false && item.hasSize !== '0');
+                if (hasSize && !item.size) {
+                    missingSizeNames.push(item.name);
                     if (card) {
                         card.classList.add('missing-size-alert');
                     }
@@ -2390,6 +2402,7 @@ require_once __DIR__ . '/../includes/header.php';
         const btnLabel = card.querySelector('.select-btn-label');
         const statusEl = document.getElementById('size-status-' + prodId);
         const sizeInput = document.getElementById('selected-size-' + prodId);
+        const hasSize = card ? (card.dataset.hasSize !== '0') : true;
 
         if (state.selectedProducts[prodId]) {
             delete state.selectedProducts[prodId];
@@ -2402,7 +2415,7 @@ require_once __DIR__ . '/../includes/header.php';
             const name = card.dataset.productName;
             const price = parseFloat(card.dataset.productPrice);
             const image = card.dataset.productImage;
-            const size = sizeInput ? sizeInput.value.trim() : '';
+            const size = hasSize ? (sizeInput ? sizeInput.value.trim() : '') : '';
             const qty = parseInt(document.getElementById('qty-val-' + prodId).textContent, 10) || 1;
 
             state.selectedProducts[prodId] = {
@@ -2410,14 +2423,15 @@ require_once __DIR__ . '/../includes/header.php';
                 name: name,
                 price: price,
                 size: size,
+                hasSize: hasSize,
                 quantity: qty,
                 image: image
             };
             card.classList.add('selected');
             btnLabel.textContent = '✓ Selected';
 
-            // Show size status text
-            if (statusEl) {
+            // Show size status text only for products that require sizes
+            if (hasSize && statusEl) {
                 statusEl.style.display = 'inline-block';
                 if (!size) {
                     statusEl.textContent = "Size didn't select";
@@ -2795,13 +2809,24 @@ require_once __DIR__ . '/../includes/header.php';
             totalAmount += lineTotal;
 
             const card = document.getElementById('card-prod-' + pid);
+            const hasSize = card ? (card.dataset.hasSize !== '0') : (it.hasSize !== false && it.hasSize !== '0' && it.size && it.size !== 'Standard');
             const sizesRaw = card ? card.dataset.sizes : '';
-            const sizeList = sizesRaw ? sizesRaw.split(',').map(s => s.trim()).filter(Boolean) : ['24','26','28','30','32','34','36','38','40','42','44','46'];
+            const sizeList = sizesRaw ? sizesRaw.split(',').map(s => s.trim()).filter(Boolean) : (hasSize ? ['24','26','28','30','32','34','36','38','40','42','44','46'] : []);
 
-            let optionsHtml = '';
-            sizeList.forEach(sz => {
-                optionsHtml += `<option value="${sz}" ${sz === it.size ? 'selected' : ''}>Size ${sz}</option>`;
-            });
+            let sizeHtml = '';
+            if (hasSize && sizeList.length > 0) {
+                let optionsHtml = '';
+                sizeList.forEach(sz => {
+                    optionsHtml += `<option value="${sz}" ${sz === it.size ? 'selected' : ''}>Size ${sz}</option>`;
+                });
+                sizeHtml = `
+                    <select class="inline-size-select" onchange="updateItemSizeInline(${pid}, this.value)" title="Change size inline">
+                        ${optionsHtml}
+                    </select>
+                `;
+            } else {
+                sizeHtml = `<span style="color:var(--wizard-muted); font-size:1.1rem; font-weight:700;">—</span>`;
+            }
 
             const tr = document.createElement('tr');
             tr.id = `review-row-${pid}`;
@@ -2812,9 +2837,7 @@ require_once __DIR__ . '/../includes/header.php';
                     <span style="font-size:0.75rem; color:var(--wizard-muted);">Approved Academic Stitch</span>
                 </td>
                 <td>
-                    <select class="inline-size-select" onchange="updateItemSizeInline(${pid}, this.value)" title="Change size inline">
-                        ${optionsHtml}
-                    </select>
+                    ${sizeHtml}
                 </td>
                 <td>
                     <div style="display:inline-flex; align-items:center; gap:6px;">
@@ -2919,7 +2942,8 @@ require_once __DIR__ . '/../includes/header.php';
         const it = state.selectedProducts[pid];
         const msgEl = document.getElementById('confirm-delete-item-msg');
         if (msgEl) {
-            const sizeLabel = it.size ? ` (Size: ${it.size})` : '';
+            const hasSize = (it.hasSize !== false && it.hasSize !== '0' && it.size && it.size !== 'Standard');
+            const sizeLabel = hasSize ? ` (Size: ${it.size})` : '';
             msgEl.innerHTML = `Are you sure you want to remove <strong>${it.name}</strong>${sizeLabel} from your order requisition?`;
         }
         const modal = document.getElementById('portal-confirm-delete-modal');
@@ -2963,12 +2987,18 @@ require_once __DIR__ . '/../includes/header.php';
                 selectBtn.innerHTML = '<span class="select-btn-label">Select</span>';
             }
             card.querySelectorAll('.size-chip').forEach(c => c.classList.remove('active'));
+            const hasSize = card.dataset.hasSize !== '0';
             const sizeInput = document.getElementById('selected-size-' + pid);
             if (sizeInput) sizeInput.value = '';
-            const sizeStatus = card.querySelector('.size-status-text');
+            const sizeStatus = card.querySelector('.size-status-text') || document.getElementById('size-status-' + pid);
             if (sizeStatus) {
-                sizeStatus.className = 'size-status-text missing';
-                sizeStatus.textContent = "Size didn't select";
+                if (hasSize) {
+                    sizeStatus.className = 'size-status-msg error';
+                    sizeStatus.textContent = "Size didn't select";
+                    sizeStatus.style.display = 'none';
+                } else {
+                    sizeStatus.style.display = 'none';
+                }
             }
             const cardQtyInput = document.getElementById('qty-' + pid);
             if (cardQtyInput) cardQtyInput.value = 1;
@@ -3072,10 +3102,11 @@ require_once __DIR__ . '/../includes/header.php';
             const lineTotal = it.price * it.quantity;
             grandTotal += lineTotal;
             totalQty += it.quantity;
+            const sizeVal = (it.hasSize !== false && it.size && it.size !== 'Standard') ? it.size : '—';
             tableRows.push([
                 itemIndex++,
                 it.name,
-                it.size,
+                sizeVal,
                 it.quantity,
                 'Rs. ' + it.price.toLocaleString('en-IN'),
                 'Rs. ' + lineTotal.toLocaleString('en-IN')
@@ -3136,7 +3167,8 @@ require_once __DIR__ . '/../includes/header.php';
         for (const pid in state.selectedProducts) {
             const it = state.selectedProducts[pid];
             totalItems += it.quantity;
-            itemsListText += `${idx++}. ${it.name} | Size: ${it.size} | Qty: ${it.quantity}\n`;
+            const sizeStr = (it.hasSize !== false && it.size && it.size !== 'Standard') ? ` | Size: ${it.size}` : '';
+            itemsListText += `${idx++}. ${it.name}${sizeStr} | Qty: ${it.quantity}\n`;
         }
 
         const msgText = 
@@ -3254,7 +3286,7 @@ Please confirm this order. Thank you!`;
             itemsPayload.push({
                 product_id: it.id,
                 name: it.name,
-                size: it.size || 'Standard',
+                size: (it.hasSize !== false && it.size && it.size !== 'Standard') ? it.size : '',
                 quantity: it.quantity,
                 price: it.price
             });

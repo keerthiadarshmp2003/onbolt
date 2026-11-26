@@ -1775,12 +1775,16 @@ function openOrderViewModal(orderId) {
                     data.items.forEach(it => {
                         const tr = document.createElement('tr');
                         tr.style.borderBottom = '1px solid #E2E8F0';
+                        const hasCustomSize = it.size && !['free', 'standard', 'n/a', 'none', '-'].includes(String(it.size).toLowerCase().trim());
+                        const sizeDisplay = hasCustomSize 
+                            ? `<span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.75rem;">Size ${it.size}</span>`
+                            : `<span style="color:#94A3B8; font-weight:700;">—</span>`;
                         tr.innerHTML = `
                             <td style="padding:0.65rem 0.85rem; font-weight:700; color:#0F172A;">
                                 ${it.product_name}
                             </td>
                             <td style="padding:0.65rem 0.85rem; color:#475569;">
-                                <span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.75rem;">Size ${it.size || 'Free'}</span>
+                                ${sizeDisplay}
                             </td>
                             <td style="padding:0.65rem 0.85rem; text-align:center; font-weight:800; color:#0F172A;">
                                 ${it.quantity}
