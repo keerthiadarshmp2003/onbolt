@@ -26,56 +26,6 @@ $adminActive = 'create_order';
 
 $pdo = getDbConnection();
 
-// ==================== AJAX GATEWAY STATUS CHECKER ====================
-if (isset($_GET['ajax_check_gateway_status'])) {
-    if (ob_get_level()) ob_end_clean();
-    header('Content-Type: application/json; charset=utf-8');
-
-    $collectId = trim($_GET['collect_id'] ?? '');
-    $orderId = (int)($_GET['order_id'] ?? 0);
-
-    if (empty($collectId)) {
-        echo json_encode(['success' => false, 'is_paid' => false, 'message' => 'Missing collect id']);
-        exit;
-    }
-
-    $statusRes = edviron_get_status_by_collect_id($collectId);
-    $data = $statusRes['data'] ?? [];
-    $rawStatus = strtoupper(trim((string)($data['status'] ?? 'PENDING')));
-
-    $isSuccess = ($rawStatus === 'SUCCESS' || (isset($data['status_code']) && (int)$data['status_code'] === 200 && $rawStatus !== 'FAILED' && $rawStatus !== 'NOT INITIATED'));
-
-    if ($isSuccess && $orderId > 0) {
-        $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed' WHERE id = ?")->execute([$orderId]);
-        $pdo->prepare("UPDATE payments SET status = 'Completed' WHERE order_id = ?")->execute([$orderId]);
-    }
-
-    echo json_encode([
-        'success'    => true,
-        'is_paid'    => $isSuccess,
-        'status'     => $rawStatus,
-        'collect_id' => $collectId,
-        'order_id'   => $orderId
-    ]);
-    exit;
-}
-
-// ==================== AJAX MANUAL GATEWAY VERIFICATION ====================
-if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'manual_verify_gateway_paid') {
-    if (ob_get_level()) ob_end_clean();
-    header('Content-Type: application/json; charset=utf-8');
-
-    $orderId = (int)($_POST['order_id'] ?? 0);
-    if ($orderId > 0) {
-        $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed' WHERE id = ?")->execute([$orderId]);
-        $pdo->prepare("UPDATE payments SET status = 'Completed' WHERE order_id = ?")->execute([$orderId]);
-        echo json_encode(['success' => true]);
-    } else {
-        echo json_encode(['success' => false, 'error' => 'Invalid order ID']);
-    }
-    exit;
-}
-
 // ==================== AJAX PRODUCT FETCHER ====================
 if (isset($_GET['ajax_get_school_products'])) {
     if (ob_get_level()) ob_end_clean();
@@ -556,22 +506,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $pincode = trim($_POST['pincode'] ?? '695001');
         $state = trim($_POST['state'] ?? 'Kerala');
 
-        $paymentMethod = trim($_POST['payment_method'] ?? '');
-        if (empty($paymentMethod) || !in_array($paymentMethod, ['Cash (Counter)', 'Direct UPI / QR', 'Card / POS', 'Bank Transfer / NEFT'], true)) {
-            throw new Exception('Please select a Payment Method.');
-        }
-        $paymentStatus = trim($_POST['payment_status'] ?? '');
-        if (empty($paymentStatus) || !in_array($paymentStatus, ['Paid', 'Pending'], true)) {
-            throw new Exception('Please select Payment Status.');
-        }
-        $orderStatus = trim($_POST['order_status'] ?? '');
-        if (empty($orderStatus) || !in_array($orderStatus, ['Completed', 'Confirmed'], true)) {
-            throw new Exception('Please select Order Status.');
-        }
-        $paymentRef = trim($_POST['payment_reference'] ?? '');
-        $cashTendered = (float)($_POST['cash_tendered'] ?? 0.0);
         $discountAmount = max(0.0, (float)($_POST['discount_amount'] ?? 0.0));
-        $adminNotes = trim($_POST['admin_notes'] ?? '');
+        $paymentMethod = 'UPI';
+        $paymentStatus = 'Pending';
+        $orderStatus = 'Pending';
 
         $itemsJson = $_POST['items_json'] ?? '';
         $items = json_decode($itemsJson, true);
@@ -589,11 +527,17 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         if (empty($mobile) || strlen($mobile) < 10) {
             throw new Exception('A valid 10-digit mobile number is required.');
         }
+        if (empty($gender)) {
+            throw new Exception('Please select Gender (Boy, Girl, or Unisex).');
+        }
+        if (empty($fulfillmentType)) {
+            throw new Exception('Please select Fulfillment Handover Mode.');
+        }
         if (empty($items) || !is_array($items)) {
             throw new Exception('Please add at least one uniform item to the order.');
         }
 
-        // Resolve School Code for Order Reference ID
+        // Resolve School Code for Gateway additional data
         $targetSchoolIdForCode = $subSchoolId ?: $schoolId;
         $codeStmt = $pdo->prepare("SELECT code, parent_id, name FROM schools WHERE id = ?");
         $codeStmt->execute([$targetSchoolIdForCode]);
@@ -608,22 +552,6 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         }
         if (empty($schoolCode)) {
             $schoolCode = 'OB';
-        }
-
-        // Generate unique order reference
-        $orderRef = '';
-        for ($i = 0; $i < 10; $i++) {
-            $randNum = rand(100000, 999999);
-            $candidateRef = $schoolCode . $randNum;
-            $chk = $pdo->prepare("SELECT id FROM orders WHERE order_reference = ?");
-            $chk->execute([$candidateRef]);
-            if (!$chk->fetch()) {
-                $orderRef = $candidateRef;
-                break;
-            }
-        }
-        if (empty($orderRef)) {
-            $orderRef = $schoolCode . time();
         }
 
         // Compute Totals
@@ -657,72 +585,20 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 : 'Direct School Handover';
         }
 
-        // Append administrative notes
-        $compiledNotes = "Walk-in Order created by Admin {$adminName}. ";
-        if (!empty($paymentRef)) {
-            $compiledNotes .= "Ref/Txn: {$paymentRef}. ";
-        }
-        if ($cashTendered > 0 && $paymentMethod === 'Cash (Counter)') {
-            $changeGiven = max(0.0, $cashTendered - $totalAmount);
-            $compiledNotes .= "Cash Tendered: ₹" . number_format($cashTendered, 2) . ", Change: ₹" . number_format($changeGiven, 2) . ". ";
-        }
-        if (!empty($adminNotes)) {
-            $compiledNotes .= $adminNotes;
-        }
-
-        $handoverAt = ($fulfillmentType === 'Counter' && $orderStatus === 'Completed') ? date('Y-m-d H:i:s') : null;
-        $handoverStaff = $adminName;
-        $handoverRecipient = $parentName . " (" . $studentName . ")";
-
-        // Real Gateway Integration using Edviron details for UPI / QR Scan
-        $isGatewayPayment = ($paymentMethod === 'Direct UPI / QR');
-        $collectUrl = '';
-        $collectId = '';
-
-        if ($isGatewayPayment) {
-            $callbackUrl = BASE_URL . '/schools/payment_callback.php?order=' . urlencode($orderRef);
-            $collectRes = edviron_create_collect_request([
-                'amount'           => $totalAmount,
-                'order_reference'  => $orderRef,
-                'order_id'         => $orderRef,
-                'custom_order_id'  => $orderRef,
-                'callback_url'     => $callbackUrl,
-                'student_id'       => '-',
-                'student_name'     => $studentName,
-                'student_email'    => !empty($email) ? $email : 'parent@onbolt.in',
-                'student_phone_no' => !empty($mobile) ? $mobile : '9876543210',
-                'additional_data'  => [
-                    'grade_class'  => $gradeClass,
-                    'order_ref'    => $orderRef,
-                    'parent_name'  => $parentName,
-                    'school_id'    => $schoolCode
-                ]
-            ]);
-
-            if ($collectRes['success'] && !empty($collectRes['collect_request_url'])) {
-                $collectUrl = $collectRes['collect_request_url'];
-                $collectId = $collectRes['collect_request_id'] ?? '';
-                $finalWalkinTxn = !empty($collectId) ? $collectId : ('TXN-' . strtoupper(bin2hex(random_bytes(6))));
-            } else {
-                throw new Exception('Payment Gateway Error: ' . ($collectRes['error'] ?? 'Unable to connect to gateway'));
-            }
-        } else {
-            $finalWalkinTxn = !empty($paymentRef) ? $paymentRef : ('WALKIN-' . strtoupper(bin2hex(random_bytes(4))));
-        }
+        $adminNotes = "Walk-in Desk Order. Fulfillment: {$fulfillmentType}. Initiated by Admin {$adminName}.";
 
         // Begin Transaction
         $pdo->beginTransaction();
 
+        // 1. Insert order with NULL order_reference - Order ID is ONLY generated upon confirmed SUCCESS at payment_callback!
         $orderInsert = $pdo->prepare("INSERT INTO orders (
-            order_reference, gateway_transaction_id, school_id, sub_school_id, parent_id, parent_name, student_name, gender, grade_class,
+            order_reference, payment_request_id, gateway_transaction_id, school_id, sub_school_id, parent_id, parent_name, student_name, gender, grade_class,
             mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
             subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
-            order_status, admin_notes, fulfillment_type, handover_staff, handover_recipient, handover_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+            order_status, admin_notes, fulfillment_type, handover_staff, handover_recipient, created_at, updated_at
+        ) VALUES (NULL, NULL, NULL, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
 
         $orderInsert->execute([
-            $orderRef,
-            $finalWalkinTxn,
             $schoolId,
             $subSchoolId,
             $parentId,
@@ -742,29 +618,19 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             $paymentStatus,
             $paymentMethod,
             $orderStatus,
-            $compiledNotes,
+            $adminNotes,
             $fulfillmentType,
-            $handoverStaff,
-            $handoverRecipient,
-            $handoverAt
+            $adminName,
+            $parentName . " (" . $studentName . ")"
         ]);
 
         $orderId = (int)$pdo->lastInsertId();
 
-        // Automatically capture and store payment transaction record
-        $payStatus = ($paymentStatus === 'Paid') ? 'Completed' : 'Pending';
-        $payInsert = $pdo->prepare("INSERT INTO payments (
-            order_id, transaction_ref, payment_method, amount, currency, status, created_at
-        ) VALUES (?, ?, ?, ?, 'INR', ?, NOW())");
-        $payInsert->execute([
-            $orderId,
-            $finalWalkinTxn,
-            $paymentMethod,
-            $totalAmount,
-            $payStatus
-        ]);
+        // 2. Generate unique sequential payment request ID (e.g. REQ-000045)
+        $paymentRequestId = 'REQ-' . str_pad((string)$orderId, 6, '0', STR_PAD_LEFT);
+        $pdo->prepare("UPDATE orders SET payment_request_id = ? WHERE id = ?")->execute([$paymentRequestId, $orderId]);
 
-        // Insert Order Items
+        // 3. Insert Order Items & deduct variant stock
         $itemInsert = $pdo->prepare("INSERT INTO order_items (
             order_id, product_id, product_name, variant_id, size, color, quantity, unit_price, total_price
         ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?)");
@@ -793,40 +659,91 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
                 $lTotal
             ]);
 
-            // Deduct variant stock if variant id exists
             if ($variantId) {
                 $stockUpdate->execute([$qty, $variantId]);
             }
         }
 
-        $pdo->commit();
+        // 4. Build callback URL with unique sequential request ID and school ID (same as public page!)
+        $callbackUrl = BASE_URL . '/schools/payment_callback.php?request_id=' . urlencode($paymentRequestId) . '&school_id=' . urlencode((string)$schoolId);
 
-        logActivity('create_walkin_order', 'orders', (int)$admin['id'], 'admin', "Direct walk-in order {$orderRef} created for student {$studentName} ({$targetSchoolRow['name']}), total: ₹{$totalAmount}");
+        // 5. Call Edviron Payment Gateway API
+        $collectRes = edviron_create_collect_request([
+            'amount'           => $totalAmount,
+            'order_reference'  => $paymentRequestId,
+            'order_id'         => $paymentRequestId,
+            'custom_order_id'  => $paymentRequestId,
+            'callback_url'     => $callbackUrl,
+            'student_id'       => '-',
+            'student_name'     => $studentName,
+            'student_email'    => !empty($email) ? $email : 'parent@onbolt.in',
+            'student_phone_no' => !empty($mobile) ? $mobile : '9876543210',
+            'additional_data'  => [
+                'grade_class'  => $gradeClass,
+                'order_ref'    => '-',
+                'parent_name'  => $parentName,
+                'school_id'    => $schoolCode
+            ]
+        ]);
 
-        $successData = [
-            'order_id' => $orderId,
-            'order_reference' => $orderRef,
-            'total_amount' => $totalAmount,
-            'total_formatted' => formatCurrency($totalAmount),
-            'student_name' => $studentName,
-            'school_name' => $targetSchoolRow['name'] ?? 'School',
-            'payment_method' => $paymentMethod,
-            'payment_status' => $paymentStatus,
-            'gateway_transaction_id' => $finalWalkinTxn,
-            'is_gateway' => $isGatewayPayment,
-            'collect_url' => $collectUrl,
-            'collect_id' => $collectId,
-            'receipt_url' => BASE_URL . "/admin/create_order.php?print_receipt={$orderId}"
-        ];
+        if ($collectRes['success'] && !empty($collectRes['collect_request_url'])) {
+            $collectId = $collectRes['collect_request_id'] ?? '';
+            $transactionRef = !empty($collectId) ? $collectId : ('TXN-' . strtoupper(bin2hex(random_bytes(6))));
+            $redirectUrl = $collectRes['collect_request_url'];
+            $gatewayResponse = json_encode($collectRes['raw'] ?? ['status' => 'collect_request_created']);
 
-        if ($isAjaxPost) {
-            header('Content-Type: application/json; charset=utf-8');
-            echo json_encode([
-                'success' => true,
-                'data' => $successData,
-                'message' => "Order {$orderRef} created successfully!"
+            $pdo->prepare("UPDATE orders SET gateway_transaction_id = ? WHERE id = ?")->execute([$transactionRef, $orderId]);
+
+            // Payment record
+            $payInsert = $pdo->prepare("INSERT INTO payments (
+                order_id, transaction_ref, payment_method, amount, currency, status, gateway_response, created_at
+            ) VALUES (?, ?, ?, ?, 'INR', 'Pending', ?, NOW())");
+            $payInsert->execute([
+                $orderId,
+                $transactionRef,
+                $paymentMethod,
+                $totalAmount,
+                $gatewayResponse
             ]);
-            exit;
+
+            // Order status history
+            $histStmt = $pdo->prepare("INSERT INTO order_status_history (order_id, previous_status, new_status, comment, changed_by, created_at) VALUES (?, NULL, 'Pending', ?, 'Walk-in Desk', NOW())");
+            $histStmt->execute([
+                $orderId,
+                "Walk-in order initiated. Gateway Transaction ID: {$transactionRef}. Awaiting payment completion."
+            ]);
+
+            // Notification
+            $notifStmt = $pdo->prepare("INSERT INTO notifications (title, message, type, link, created_at) VALUES (?, ?, 'order', ?, NOW())");
+            $notifStmt->execute([
+                "New Walk-in Payment Request: {$paymentRequestId}",
+                "Order requisition for {$studentName} ({$gradeClass}) initiated via desk. Payment Pending (Rs. {$totalAmount})",
+                "pending_transactions.php?search=" . urlencode($mobile)
+            ]);
+
+            $pdo->commit();
+
+            $_SESSION['last_payment_request_id'] = $paymentRequestId;
+            $_SESSION['last_order_id'] = $orderId;
+            unset($_SESSION['last_order_reference']);
+
+            logActivity('create_walkin_order', 'orders', (int)$admin['id'], 'admin', "Walk-in payment request {$paymentRequestId} created for student {$studentName} ({$targetSchoolRow['name']}), total: ₹{$totalAmount}");
+
+            if ($isAjaxPost) {
+                header('Content-Type: application/json; charset=utf-8');
+                echo json_encode([
+                    'success' => true,
+                    'redirect_url' => $redirectUrl,
+                    'payment_request_id' => $paymentRequestId
+                ]);
+                exit;
+            } else {
+                header("Location: " . $redirectUrl);
+                exit;
+            }
+        } else {
+            $pdo->rollBack();
+            throw new Exception($collectRes['error'] ?? 'Unable to initiate online payment session with gateway.');
         }
 
     } catch (Exception $e) {
@@ -1451,162 +1368,19 @@ require_once __DIR__ . '/header.php';
                     </div>
                 </div>
 
-                <!-- STEP 3: PAYMENT METHOD -->
-                <div style="margin-bottom:1.25rem;">
-                    <label class="desk-label" style="margin-bottom:0.5rem; display:block;">
-                        💳 Step 3: Payment Method *
-                    </label>
-                    <div class="payment-grid">
-                        <label class="payment-option-card" onclick="setPaymentMethod('Cash (Counter)', this)">
-                            <input type="radio" name="payment_method" value="Cash (Counter)">
-                            <div class="pay-icon">💵</div>
-                            <div class="pay-label">Cash at Counter</div>
-                        </label>
-                        <label class="payment-option-card" onclick="setPaymentMethod('Direct UPI / QR', this)">
-                            <input type="radio" name="payment_method" value="Direct UPI / QR">
-                            <div class="pay-icon">📱</div>
-                            <div class="pay-label">UPI / QR Scan</div>
-                        </label>
-                        <label class="payment-option-card" onclick="setPaymentMethod('Card / POS', this)">
-                            <input type="radio" name="payment_method" value="Card / POS">
-                            <div class="pay-icon">💳</div>
-                            <div class="pay-label">Card / POS</div>
-                        </label>
-                        <label class="payment-option-card" onclick="setPaymentMethod('Bank Transfer / NEFT', this)">
-                            <input type="radio" name="payment_method" value="Bank Transfer / NEFT">
-                            <div class="pay-icon">🏦</div>
-                            <div class="pay-label">Bank Transfer</div>
-                        </label>
-                    </div>
-
-                    <!-- UPI Gateway Info Box -->
-                    <div id="upiGatewayInfo" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:var(--radius-md); padding:0.85rem; margin-top:0.75rem; margin-bottom:1rem; text-align:left;">
-                        <div style="font-size:0.75rem; font-weight:800; color:#1E40AF; text-transform:uppercase; margin-bottom:0.25rem; display:flex; align-items:center; gap:6px;">
-                            <span>⚡</span> Live Payment Gateway &amp; UPI QR Desk
-                        </div>
-                        <p style="font-size:0.8rem; color:#1E3A8A; margin:0; line-height:1.4;">
-                            Submitting will automatically connect with the payment gateway to generate a dynamic UPI QR code. The customer can scan directly from the screen, and the transaction ID will be verified in real time.
-                        </p>
-                    </div>
-
-                    <!-- Cash Tender Calculator -->
-                    <div id="cashCalculatorWrap" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:var(--radius-md); padding:0.85rem; margin-bottom:1rem;">
-                        <div style="font-size:0.75rem; font-weight:800; color:#166534; text-transform:uppercase; margin-bottom:0.4rem;">
-                            Cash Change Calculator
-                        </div>
-                        <div style="display:flex; gap:0.5rem; align-items:center;">
-                            <div style="flex:1;">
-                                <label style="font-size:0.72rem; color:#15803d; font-weight:700;">Cash Given (₹):</label>
-                                <input type="number" name="cash_tendered" id="cashTenderedInput" class="desk-input" style="padding:0.4rem 0.6rem; font-size:0.9rem;" placeholder="e.g. 1000" oninput="calculateCashChange()">
-                            </div>
-                            <div style="flex:1; text-align:right;">
-                                <div style="font-size:0.72rem; color:#15803d; font-weight:700;">Change Return:</div>
-                                <div id="cashChangeDisplay" style="font-size:1.1rem; font-weight:800; color:#15803d;">₹ 0.00</div>
-                            </div>
-                        </div>
-                    </div>
-
-                    <!-- Reference Input (For UPI UTR / Card Auth) -->
-                    <div id="paymentRefWrap" style="display:none; margin-bottom:1rem;">
-                        <label class="desk-label" id="paymentRefLabel">Transaction Reference / UTR</label>
-                        <input type="text" name="payment_reference" id="paymentRefInput" class="desk-input" placeholder="e.g. UPI Ref / UTR / Card Slip No">
-                    </div>
-
-                    <!-- Payment Status & Order Status -->
-                    <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.6rem; margin-bottom:1rem;">
-                        <div class="desk-form-group">
-                            <label class="desk-label">Payment Status *</label>
-                            <select name="payment_status" id="paymentStatus" class="desk-select" required style="font-weight:700;">
-                                <option value="" selected disabled>Select</option>
-                                <option value="Paid">✓ Paid in Full</option>
-                                <option value="Pending">⏳ Payment Pending</option>
-                            </select>
-                        </div>
-                        <div class="desk-form-group">
-                            <label class="desk-label">Order Status *</label>
-                            <select name="order_status" id="orderStatus" class="desk-select" required style="font-weight:700;">
-                                <option value="" selected disabled>Select</option>
-                                <option value="Completed">✓ Completed (Handed Over)</option>
-                                <option value="Confirmed">📦 Confirmed (In Progress)</option>
-                            </select>
-                        </div>
-                    </div>
-
-                    <!-- Optional Staff Remarks -->
-                    <div class="desk-form-group" style="margin-bottom:1.25rem;">
-                        <label class="desk-label">Staff Remarks (Optional)</label>
-                        <input type="text" name="admin_notes" class="desk-input" placeholder="e.g. Size exchange note, receipt given to parent">
+                <!-- Pay Now Action -->
+                <div style="margin-top:0.75rem;">
+                    <button type="submit" id="btnPlaceOrder" class="btn btn-primary" style="width:100%; padding:0.95rem; font-size:1.05rem; font-weight:800; border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(255, 103, 2, 0.35);">
+                        <span id="btnPayNowLabel">💳 Pay Now</span>
+                    </button>
+                    <div style="font-size:0.75rem; color:#64748B; text-align:center; margin-top:0.6rem; display:flex; align-items:center; justify-content:center; gap:4px;">
+                        <span>🔒</span> Redirects to secure payment gateway
                     </div>
                 </div>
-
-                <!-- Submit Button -->
-                <button type="submit" id="btnPlaceOrder" class="btn btn-primary" style="width:100%; padding:0.9rem; font-size:1rem; font-weight:800; border-radius:var(--radius-lg); display:flex; align-items:center; justify-content:center; gap:8px; box-shadow:0 4px 14px rgba(255, 103, 2, 0.35);">
-                    <span>💳 Complete Order &amp; Generate Receipt</span>
-                </button>
             </div>
         </div>
     </div>
 </form>
-
-<!-- POPUP MODAL: LIVE GATEWAY PAYMENT & QR SCAN -->
-<div id="gatewayPaymentModal" class="desk-modal-overlay" style="display:none;">
-    <div class="desk-modal-card" style="max-width:480px; padding:1.75rem;">
-        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #E2E8F0; padding-bottom:0.75rem;">
-            <div style="text-align:left;">
-                <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:var(--brand-primary); letter-spacing:0.5px;">Live Payment Desk</span>
-                <h3 style="font-size:1.15rem; font-weight:800; color:var(--brand-dark); margin:0;">UPI &amp; QR Payment</h3>
-            </div>
-            <button type="button" onclick="closeGatewayModal()" style="background:none; border:none; font-size:1.4rem; line-height:1; color:#94A3B8; cursor:pointer;" title="Close">&times;</button>
-        </div>
-
-        <div style="text-align:center; margin-bottom:1.25rem;">
-            <div style="background:#F8FAFC; border:1.5px dashed #CBD5E1; border-radius:16px; padding:1.25rem; display:inline-block; margin-bottom:0.75rem;">
-                <img id="gwQrImg" src="" alt="UPI QR Code" style="width:210px; height:210px; display:block; border-radius:8px; background:#fff;">
-            </div>
-            <div style="font-size:0.82rem; color:#64748B;">
-                Scan with any UPI App: <strong>GPay, PhonePe, Paytm, BHIM</strong>
-            </div>
-        </div>
-
-        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--radius-md); padding:0.85rem 1rem; margin-bottom:1rem; text-align:left; font-size:0.85rem;">
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <span style="color:#64748B;">Order Ref:</span>
-                <strong id="gwOrderRef" style="color:var(--brand-primary);">-</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <span style="color:#64748B;">Payable Amount:</span>
-                <strong id="gwAmount" style="color:#16A34A; font-size:1rem;">-</strong>
-            </div>
-            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
-                <span style="color:#64748B;">Student:</span>
-                <span id="gwStudent" style="font-weight:700; color:#1E293B;">-</span>
-            </div>
-            <div style="display:flex; justify-content:space-between; align-items:center;">
-                <span style="color:#64748B;">Gateway Txn ID:</span>
-                <span id="gwTxnId" style="font-family:monospace; font-size:0.75rem; background:#E2E8F0; color:#0F172A; padding:2px 6px; border-radius:4px; max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</span>
-            </div>
-        </div>
-
-        <div id="gwStatusBox" style="margin-bottom:1.25rem; padding:0.6rem 1rem; border-radius:9999px; font-size:0.82rem; font-weight:700; display:inline-flex; align-items:center; gap:8px; background:#FEF3C7; color:#92400E;">
-            <span class="gw-pulse" style="width:8px; height:8px; border-radius:50%; background:#D97706; display:inline-block;"></span>
-            <span id="gwStatusText">Waiting for parent to scan &amp; pay...</span>
-        </div>
-
-        <div style="display:flex; flex-direction:column; gap:0.5rem;">
-            <a id="gwOpenLinkBtn" href="#" target="_blank" class="btn btn-outline" style="padding:0.6rem; font-size:0.85rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;">
-                <span>🔗 Open Live Payment Checkout Page</span>
-            </a>
-            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
-                <button type="button" id="gwManualVerifyBtn" onclick="manualVerifyGatewayPaid()" class="btn btn-primary" style="padding:0.65rem; font-size:0.82rem; font-weight:800; background:#10B981; border-color:#10B981;">
-                    ✓ Mark as Paid
-                </button>
-                <button type="button" onclick="completeGatewayOrder()" class="btn btn-primary" style="padding:0.65rem; font-size:0.82rem; font-weight:800;">
-                    🖨️ View Receipt
-                </button>
-            </div>
-        </div>
-    </div>
-</div>
 
 <!-- POPUP MODAL: ORDER CREATED SUCCESSFULLY -->
 <div id="orderSuccessModal" class="desk-modal-overlay" style="display:none;">
@@ -1986,46 +1760,9 @@ function calculateBillTotal(computedSubtotal = null) {
     document.getElementById('billSubtotal').textContent = '₹ ' + computedSubtotal.toFixed(2);
     document.getElementById('billGrandTotal').textContent = '₹ ' + grandTotal.toFixed(2);
 
-    calculateCashChange();
-}
-
-function calculateCashChange() {
-    const grandText = document.getElementById('billGrandTotal').textContent.replace(/[^0-9.]/g, '');
-    const grandTotal = parseFloat(grandText) || 0.0;
-    const tendered = parseFloat(document.getElementById('cashTenderedInput').value) || 0.0;
-
-    const change = Math.max(0, tendered - grandTotal);
-    document.getElementById('cashChangeDisplay').textContent = '₹ ' + change.toFixed(2);
-}
-
-// Payment Method Card Selector
-function setPaymentMethod(method, cardEl) {
-    document.querySelectorAll('.payment-option-card').forEach(c => c.classList.remove('active'));
-    cardEl.classList.add('active');
-    cardEl.querySelector('input').checked = true;
-
-    const cashWrap = document.getElementById('cashCalculatorWrap');
-    const refWrap = document.getElementById('paymentRefWrap');
-    const refLabel = document.getElementById('paymentRefLabel');
-    const upiInfo = document.getElementById('upiGatewayInfo');
-
-    if (method === 'Cash (Counter)') {
-        cashWrap.style.display = 'block';
-        refWrap.style.display = 'none';
-        if (upiInfo) upiInfo.style.display = 'none';
-    } else if (method === 'Direct UPI / QR') {
-        cashWrap.style.display = 'none';
-        refWrap.style.display = 'none';
-        if (upiInfo) upiInfo.style.display = 'block';
-    } else {
-        cashWrap.style.display = 'none';
-        refWrap.style.display = 'block';
-        if (upiInfo) upiInfo.style.display = 'none';
-        if (method === 'Card / POS') {
-            refLabel.textContent = 'Card Slip / Auth Code (Optional)';
-        } else {
-            refLabel.textContent = 'Bank Transaction Reference (Optional)';
-        }
+    const payBtnLabel = document.getElementById('btnPayNowLabel');
+    if (payBtnLabel) {
+        payBtnLabel.textContent = grandTotal > 0 ? ('💳 Pay Now (₹ ' + grandTotal.toFixed(2) + ')') : '💳 Pay Now';
     }
 }
 
@@ -2046,7 +1783,7 @@ function handleFulfillmentChange(mode) {
     }
 }
 
-// Submit Order via AJAX
+// Submit Order and Redirect directly to Edviron Payment Gateway
 function handleOrderSubmit(e) {
     e.preventDefault();
 
@@ -2055,8 +1792,6 @@ function handleOrderSubmit(e) {
     const gradeClass = document.getElementById('gradeClass').value.trim();
     const mobile = document.getElementById('parentMobile').value.trim();
     const fulfillmentType = document.getElementById('fulfillmentType').value;
-    const paymentStatus = document.getElementById('paymentStatus').value;
-    const orderStatus = document.getElementById('orderStatus').value;
 
     if (!schoolId) {
         alert('Please choose a partner school.');
@@ -2092,26 +1827,11 @@ function handleOrderSubmit(e) {
         alert('Your order bill is empty. Please add at least one uniform item.');
         return false;
     }
-    const paymentMethodChecked = document.querySelector('input[name="payment_method"]:checked');
-    if (!paymentMethodChecked) {
-        alert('Please select a Payment Method.');
-        return false;
-    }
-    if (!paymentStatus) {
-        alert('Please select Payment Status.');
-        document.getElementById('paymentStatus').focus();
-        return false;
-    }
-    if (!orderStatus) {
-        alert('Please select Order Status.');
-        document.getElementById('orderStatus').focus();
-        return false;
-    }
 
     const btn = document.getElementById('btnPlaceOrder');
     const origHtml = btn.innerHTML;
     btn.disabled = true;
-    btn.innerHTML = '<span>⏳ Processing Direct Order...</span>';
+    btn.innerHTML = '<span>🔒 Connecting to Secure Payment Gateway...</span>';
 
     const formData = new FormData(document.getElementById('directOrderForm'));
     formData.append('is_ajax', '1');
@@ -2122,22 +1842,23 @@ function handleOrderSubmit(e) {
     })
     .then(res => res.json())
     .then(data => {
-        btn.disabled = false;
-        btn.innerHTML = origHtml;
-
-        if (data.success && data.data) {
-            if (data.data.is_gateway && data.data.collect_url) {
-                showGatewayModal(data.data);
-            } else {
-                showSuccessModal(data.data);
-            }
+        if (data && data.success && data.redirect_url) {
+            btn.innerHTML = '<span>✓ Redirecting to Secure Payment Gateway...</span>';
+            btn.style.background = '#15803D';
+            setTimeout(() => {
+                window.location.href = data.redirect_url;
+            }, 300);
         } else {
-            alert('Error creating order: ' + (data.error || 'Unknown error occurred.'));
+            btn.disabled = false;
+            btn.innerHTML = origHtml;
+            btn.style.background = '';
+            alert('Error initiating payment: ' + (data.error || 'Unknown error occurred.'));
         }
     })
     .catch(err => {
         btn.disabled = false;
         btn.innerHTML = origHtml;
+        btn.style.background = '';
         console.error(err);
         alert('Connection error occurred while processing order.');
     });
@@ -2145,139 +1866,9 @@ function handleOrderSubmit(e) {
     return false;
 }
 
-let GW_ACTIVE_DATA = null;
-let GW_POLL_TIMER = null;
-
-function showGatewayModal(data) {
-    GW_ACTIVE_DATA = data;
-    ACTIVE_RECEIPT_URL = data.receipt_url;
-
-    document.getElementById('gwOrderRef').textContent = '#' + data.order_reference;
-    document.getElementById('gwAmount').textContent = data.total_formatted;
-    document.getElementById('gwStudent').textContent = data.student_name;
-    document.getElementById('gwTxnId').textContent = data.gateway_transaction_id || data.collect_id || '-';
-    document.getElementById('gwOpenLinkBtn').href = data.collect_url;
-
-    // Generate dynamic QR code
-    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(data.collect_url);
-    document.getElementById('gwQrImg').src = qrUrl;
-
-    // Reset status box
-    const statusBox = document.getElementById('gwStatusBox');
-    const statusText = document.getElementById('gwStatusText');
-    statusBox.style.background = '#FEF3C7';
-    statusBox.style.color = '#92400E';
-    statusText.textContent = 'Waiting for parent to scan & pay...';
-
-    const verifyBtn = document.getElementById('gwManualVerifyBtn');
-    verifyBtn.disabled = false;
-    verifyBtn.textContent = '✓ Mark as Paid';
-
-    document.getElementById('gatewayPaymentModal').style.display = 'flex';
-
-    // Start auto polling every 3 seconds
-    clearInterval(GW_POLL_TIMER);
-    if (data.collect_id && data.order_id) {
-        GW_POLL_TIMER = setInterval(() => {
-            fetch('<?= BASE_URL ?>/admin/create_order.php?ajax_check_gateway_status=1&collect_id=' + encodeURIComponent(data.collect_id) + '&order_id=' + data.order_id)
-                .then(res => res.json())
-                .then(res => {
-                    if (res && res.is_paid) {
-                        clearInterval(GW_POLL_TIMER);
-                        gwPaymentSuccess();
-                    }
-                })
-                .catch(() => {});
-        }, 3000);
-    }
-}
-
-function gwPaymentSuccess() {
-    const statusBox = document.getElementById('gwStatusBox');
-    const statusText = document.getElementById('gwStatusText');
-    statusBox.style.background = '#DCFCE7';
-    statusBox.style.color = '#166534';
-    statusText.innerHTML = '✓ Payment Confirmed via Gateway!';
-    if (GW_ACTIVE_DATA) {
-        GW_ACTIVE_DATA.payment_status = 'Paid';
-    }
-    const verifyBtn = document.getElementById('gwManualVerifyBtn');
-    verifyBtn.textContent = '✓ Verified Paid';
-    verifyBtn.disabled = true;
-}
-
-function manualVerifyGatewayPaid() {
-    if (!GW_ACTIVE_DATA || !GW_ACTIVE_DATA.order_id) return;
-    const btn = document.getElementById('gwManualVerifyBtn');
-    btn.disabled = true;
-    btn.textContent = 'Verifying...';
-
-    const formData = new FormData();
-    formData.append('action', 'manual_verify_gateway_paid');
-    formData.append('order_id', GW_ACTIVE_DATA.order_id);
-
-    fetch('<?= BASE_URL ?>/admin/create_order.php', {
-        method: 'POST',
-        body: formData
-    })
-    .then(res => res.json())
-    .then(res => {
-        if (res && res.success) {
-            clearInterval(GW_POLL_TIMER);
-            gwPaymentSuccess();
-        } else {
-            btn.disabled = false;
-            btn.textContent = '✓ Mark as Paid';
-            alert('Could not update status: ' + (res.error || 'Server error'));
-        }
-    })
-    .catch(() => {
-        btn.disabled = false;
-        btn.textContent = '✓ Mark as Paid';
-        alert('Network error while verifying payment.');
-    });
-}
-
-function completeGatewayOrder() {
-    clearInterval(GW_POLL_TIMER);
-    document.getElementById('gatewayPaymentModal').style.display = 'none';
-    if (GW_ACTIVE_DATA) {
-        showSuccessModal(GW_ACTIVE_DATA);
-    }
-}
-
-function closeGatewayModal() {
-    clearInterval(GW_POLL_TIMER);
-    document.getElementById('gatewayPaymentModal').style.display = 'none';
-    if (GW_ACTIVE_DATA) {
-        showSuccessModal(GW_ACTIVE_DATA);
-    }
-}
-
-function showSuccessModal(data) {
-    ACTIVE_RECEIPT_URL = data.receipt_url;
-    document.getElementById('modalOrderRef').textContent = '#' + data.order_reference;
-    document.getElementById('modalStudentName').textContent = data.student_name;
-    document.getElementById('modalTotalAmount').textContent = data.total_formatted;
-    document.getElementById('modalPaymentMethod').textContent = data.payment_method + ' (' + data.payment_status + ')';
-
-    document.getElementById('btnModalPrint').onclick = () => {
-        window.open(ACTIVE_RECEIPT_URL, '_blank', 'width=800,height=900');
-    };
-
-    document.getElementById('orderSuccessModal').style.display = 'flex';
-}
-
 function startNewOrder() {
-    clearInterval(GW_POLL_TIMER);
-    GW_ACTIVE_DATA = null;
-    document.getElementById('orderSuccessModal').style.display = 'none';
-    document.getElementById('gatewayPaymentModal').style.display = 'none';
     document.getElementById('directOrderForm').reset();
-    document.querySelectorAll('.payment-option-card').forEach(c => c.classList.remove('active'));
     document.querySelectorAll('.gender-pill').forEach(p => p.classList.remove('active'));
-    const upiInfo = document.getElementById('upiGatewayInfo');
-    if (upiInfo) upiInfo.style.display = 'none';
     ORDER_CART = [];
     renderCart();
     document.getElementById('schoolBadge').style.display = 'none';
