@@ -588,10 +588,31 @@ $schoolUniforms = $stmtUniforms->fetchAll();
             </label>
 
             <?php if (!empty($availableSubSchools)): ?>
+                <?php
+                $totalSubCount = count($availableSubSchools);
+                $checkedSubCount = count(array_intersect($activeSubSchoolIds, $availableSubIds));
+                $isAllSubSelected = ($totalSubCount > 0 && $checkedSubCount === $totalSubCount);
+
+                if ($checkedSubCount === 0) {
+                    $subBtnInitialLabel = 'Select your Sub School';
+                } elseif ($isAllSubSelected) {
+                    $subBtnInitialLabel = 'All Sub Schools (Combined Catalog)';
+                } elseif ($checkedSubCount === 1) {
+                    $subBtnInitialLabel = '1 Sub School Selected';
+                    foreach ($availableSubSchools as $s) {
+                        if (in_array((int)$s['id'], $activeSubSchoolIds, true)) {
+                            $subBtnInitialLabel = $s['name'];
+                            break;
+                        }
+                    }
+                } else {
+                    $subBtnInitialLabel = $checkedSubCount . ' Sub Schools Selected';
+                }
+                ?>
                 <div class="sub-school-multiselect" style="position:relative; min-width:280px;">
                     <button type="button" id="subSchoolDropdownBtn" onclick="toggleSubSchoolDropdown(event)" class="form-control" style="display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#ffffff; cursor:pointer; text-align:left;">
-                        <span id="subSchoolBtnLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:230px;">
-                            Select your Sub School
+                        <span id="subSchoolBtnLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px;">
+                            <?= htmlspecialchars($subBtnInitialLabel) ?>
                         </span>
                         <svg id="subSchoolArrowIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5" style="margin-left:8px; transition:transform 0.2s; flex-shrink:0;">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -602,7 +623,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                     <div id="subSchoolDropdownPanel" style="display:none; position:absolute; top:calc(100% + 5px); left:0; width:100%; min-width:300px; background:#ffffff; border:1.5px solid #CBD5E1; border-radius:var(--radius-md); box-shadow:0 12px 28px -4px rgba(0,0,0,0.18); z-index:99999; padding:0.5rem 0;">
                         <!-- Select All Checkbox Above -->
                         <label style="display:flex; align-items:center; gap:10px; padding:0.6rem 0.85rem; cursor:pointer; font-weight:800; font-size:0.85rem; color:#EA580C; background:#FFF7ED; margin:0 0.4rem; border-radius:6px; border:1px solid #FED7AA;">
-                            <input type="checkbox" id="selectAllSubSchools" onchange="toggleSelectAllSubSchools(this)" style="width:16px; height:16px; accent-color:#EA580C; cursor:pointer;">
+                            <input type="checkbox" id="selectAllSubSchools" onchange="toggleSelectAllSubSchools(this)" <?= $isAllSubSelected ? 'checked' : '' ?> style="width:16px; height:16px; accent-color:#EA580C; cursor:pointer;">
                             <span>Select All</span>
                         </label>
 
@@ -622,7 +643,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                         <!-- Footer with Apply button -->
                         <div style="display:flex; justify-content:space-between; align-items:center; padding:0.5rem 0.75rem 0.2rem; border-top:1px solid #E2E8F0; margin-top:0.4rem;">
                             <span id="subSelectedCountText" style="font-size:0.75rem; font-weight:700; color:#64748B;">
-                                0 selected
+                                <?= $checkedSubCount ?> of <?= $totalSubCount ?> selected
                             </span>
                             <button type="submit" class="btn btn-primary btn-sm" style="padding:0.35rem 0.85rem; font-size:0.78rem; font-weight:700;">
                                 Apply
@@ -833,14 +854,14 @@ $schoolUniforms = $stmtUniforms->fetchAll();
             <input type="hidden" name="sub_school_ids[]" value="<?= $subId ?>">
         <?php endforeach; ?>
 
-        <select name="category" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;" onchange="this.form.submit()">
+        <select name="category" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; min-width:185px; width:auto;" onchange="this.form.submit()">
             <option value="0">Select your Category</option>
             <?php foreach ($categories as $c): ?>
                 <option value="<?= $c['id'] ?>" <?= $catFilter === (int)$c['id'] ? 'selected' : '' ?>><?= sanitize($c['name']) ?></option>
             <?php endforeach; ?>
         </select>
 
-        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Uniform Name" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; width:170px;">
+        <input type="text" name="search" value="<?= sanitize($search) ?>" placeholder="Enter your Uniform Name" class="form-control" style="padding:0.4rem 0.6rem; font-size:0.85rem; min-width:210px; width:auto;">
         <button type="submit" class="btn btn-primary btn-sm">Filter</button>
         <?php if ($catFilter > 0 || !empty($search)): ?>
             <a href="<?= BASE_URL ?>/admin/products.php?school_id=<?= $parentSchoolId ?><?= !empty($activeSubSchoolIds) ? '&' . http_build_query(['sub_school_ids' => $activeSubSchoolIds]) : '' ?>" class="btn btn-outline btn-sm">Reset</a>
@@ -1053,9 +1074,12 @@ document.addEventListener('click', function(e) {
     }
 });
 
-document.addEventListener('DOMContentLoaded', function() {
+if (document.readyState === 'loading') {
+    document.addEventListener('DOMContentLoaded', updateSubSchoolDisplay);
+} else {
     updateSubSchoolDisplay();
-});
+}
+window.addEventListener('pageshow', updateSubSchoolDisplay);
 
 function toggleUniformForm() {
     const box = document.getElementById('uniform-form-box');
