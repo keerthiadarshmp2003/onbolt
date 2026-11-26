@@ -163,12 +163,12 @@ if ($subSchoolFilter > 0) {
 
 if (!empty($searchMobile)) {
     $cleanPhone = preg_replace('/[^0-9]/', '', $searchMobile);
-    $quotedSearch = $pdo->quote("%{$searchMobile}%");
-    if (!empty($cleanPhone) && strlen($cleanPhone) >= 4) {
+    if (!empty($cleanPhone)) {
         $quotedPhone = $pdo->quote("%{$cleanPhone}%");
-        $whereSql .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $whereSql .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone})";
     } else {
-        $whereSql .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $quotedSearch = $pdo->quote("%{$searchMobile}%");
+        $whereSql .= " AND (o.mobile LIKE {$quotedSearch} OR o.alt_mobile LIKE {$quotedSearch})";
     }
 }
 
@@ -185,12 +185,12 @@ if ($subSchoolFilter > 0) {
 }
 if (!empty($searchMobile)) {
     $cleanPhone = preg_replace('/[^0-9]/', '', $searchMobile);
-    $quotedSearch = $pdo->quote("%{$searchMobile}%");
-    if (!empty($cleanPhone) && strlen($cleanPhone) >= 4) {
+    if (!empty($cleanPhone)) {
         $quotedPhone = $pdo->quote("%{$cleanPhone}%");
-        $kpiScope .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone} OR o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $kpiScope .= " AND (o.mobile LIKE {$quotedPhone} OR o.alt_mobile LIKE {$quotedPhone})";
     } else {
-        $kpiScope .= " AND (o.payment_request_id LIKE {$quotedSearch} OR o.gateway_transaction_id LIKE {$quotedSearch} OR o.mobile LIKE {$quotedSearch} OR o.student_name LIKE {$quotedSearch} OR o.parent_name LIKE {$quotedSearch})";
+        $quotedSearch = $pdo->quote("%{$searchMobile}%");
+        $kpiScope .= " AND (o.mobile LIKE {$quotedSearch} OR o.alt_mobile LIKE {$quotedSearch})";
     }
 }
 
@@ -344,13 +344,13 @@ require_once __DIR__ . '/header.php';
 <div style="background: #ffffff; border-radius: 16px; border: 1px solid #E2E8F0; padding: 1.25rem 1.5rem; margin-bottom: 1.5rem; box-shadow: 0 4px 6px -1px rgba(0,0,0,0.03);">
     <form method="GET" action="pending_transactions.php" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
         
-        <!-- Mobile / Search Input -->
+        <!-- Parent Mobile Number Input -->
         <div style="flex: 1 1 220px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
-                Parent Registered Mobile / Request ID
+                Parent Mobile Number
             </label>
             <input type="text" name="search" value="<?= htmlspecialchars($searchMobile) ?>" 
-                   placeholder="Enter your Mobile Number or Request ID" 
+                   placeholder="Enter Parent's Mobile number" 
                    style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
         </div>
 
@@ -446,7 +446,7 @@ require_once __DIR__ . '/header.php';
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
                         <div style="font-size: 1.15rem; font-weight: 800; color: #1E2530;">No Incomplete Attempts Found</div>
                         <p style="font-size: 0.88rem; margin-top: 0.25rem;">
-                            <?= !empty($searchMobile) ? "No pending or failed transactions match '<strong>" . htmlspecialchars($searchMobile) . "</strong>'." : "All initiated checkouts are either reconciled or no dropped attempts currently exist." ?>
+                            <?= !empty($searchMobile) ? "No pending or failed transactions match parent mobile number '<strong>" . htmlspecialchars($searchMobile) . "</strong>'." : "All initiated checkouts are either reconciled or no dropped attempts currently exist." ?>
                         </p>
                     </td>
                 </tr>
