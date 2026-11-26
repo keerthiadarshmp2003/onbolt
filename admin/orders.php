@@ -536,128 +536,81 @@ foreach ($ordersList as $o) {
 if (isset($_GET['export'])) {
     $exportType = strtolower(trim($_GET['export']));
 
-    if ($exportType === 'excel') {
+    if ($exportType === 'excel' || $exportType === 'csv') {
         if (ob_get_level()) {
             ob_end_clean();
         }
         $safeSchoolFilename = preg_replace('/[^a-zA-Z0-9_-]/', '_', $activeSchoolDisplay);
-        $filename = "OnBolt_Orders_Report_{$safeSchoolFilename}_" . date('Y-m-d_His') . ".xls";
-        header("Content-Type: application/vnd.ms-excel; charset=utf-8");
+        $filename = "OnBolt_Orders_Report_{$safeSchoolFilename}_" . date('Y-m-d_His') . ".csv";
+        header("Content-Type: text/csv; charset=utf-8");
         header("Content-Disposition: attachment; filename=\"$filename\"");
         header("Pragma: no-cache");
         header("Expires: 0");
 
-        echo "\xEF\xBB\xBF"; // UTF-8 BOM for Excel
-        ?>
-        <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-        <head>
-            <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-            <style>
-                body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; color: #0F172A; }
-                .report-title { font-size: 16pt; font-weight: bold; color: #FF6702; padding: 10px 0 4px 0; }
-                .report-subtitle { font-size: 10pt; color: #64748B; padding-bottom: 12px; }
-                .meta-table { margin-bottom: 15px; border-collapse: collapse; width: 100%; }
-                .meta-table td { padding: 5px 10px; font-size: 10pt; border: 1px solid #CBD5E1; }
-                .meta-label { font-weight: bold; background-color: #F8FAFC; color: #334155; }
-                .orders-table { border-collapse: collapse; width: 100%; margin-top: 10px; }
-                .orders-table th { background-color: #FF6702; color: #FFFFFF; font-weight: bold; border: 1px solid #EA580C; padding: 8px 10px; font-size: 10pt; text-align: left; vertical-align: middle; }
-                .orders-table td { border: 1px solid #CBD5E1; padding: 6px 10px; font-size: 9.5pt; vertical-align: middle; }
-                .num-text { mso-number-format: "\@"; }
-                .currency { mso-number-format: "\0022₹\0022\#\,\#\#0\.00"; text-align: right; }
-                .center { text-align: center; }
-                .right { text-align: right; }
-                .total-row { background-color: #FFF7ED; font-weight: bold; border-top: 2px solid #FF6702; }
-            </style>
-        </head>
-        <body>
-            <table>
-                <tr>
-                    <td colspan="12" class="report-title" style="border:none;">ONBOLT - Parent Purchasing Requisitions Report</td>
-                </tr>
-                <tr>
-                    <td colspan="12" class="report-subtitle" style="border:none;">
-                        School: <?= htmlspecialchars($activeSchoolDisplay) ?> &nbsp;|&nbsp; Status: <?= htmlspecialchars($activeStatusLabel) ?>
-                        <?= !empty($activeSearchLabel) ? ' &nbsp;|&nbsp; Search: ' . htmlspecialchars($activeSearchLabel) : '' ?>
-                        &nbsp;|&nbsp; Generated on <?= date('d M Y, h:i A') ?>
-                    </td>
-                </tr>
-            </table>
+        $out = fopen('php://output', 'w');
+        // UTF-8 BOM so Microsoft Excel renders Unicode properly
+        fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF));
 
-            <table class="meta-table">
-                <tr>
-                    <td class="meta-label">School:</td>
-                    <td colspan="<?= !empty($activeSubSchoolLabel) ? 2 : 4 ?>"><b><?= htmlspecialchars($activeSchoolDisplay) ?></b></td>
-                    <?php if (!empty($activeSubSchoolLabel)): ?>
-                        <td class="meta-label">Sub School:</td>
-                        <td colspan="2"><b><?= htmlspecialchars($activeSubSchoolLabel) ?></b></td>
-                    <?php endif; ?>
-                    <td class="meta-label">Order Status:</td>
-                    <td colspan="2"><b><?= htmlspecialchars($activeStatusLabel) ?></b></td>
-                    <?php if (!empty($activeSearchLabel)): ?>
-                        <td class="meta-label">Keyword:</td>
-                        <td colspan="2"><b><?= htmlspecialchars($activeSearchLabel) ?></b></td>
-                    <?php endif; ?>
-                </tr>
-                <tr>
-                    <td class="meta-label">Total Records:</td>
-                    <td colspan="2"><b><?= $totalOrdersCount ?> Orders</b></td>
-                    <td class="meta-label">Total Quantity:</td>
-                    <td colspan="2"><b><?= $totalItemsCount ?> pcs</b></td>
-                    <td class="meta-label">Grand Total:</td>
-                    <td colspan="<?= !empty($activeSearchLabel) ? 4 : 2 ?>" style="color:#EA580C; font-weight:bold; font-size:11pt;">₹<?= number_format($totalAmountSum, 2) ?></td>
-                </tr>
-            </table>
+        fputcsv($out, ['ONBOLT COMPLETE BRANDING SOLUTIONS - Parent Purchasing Requisitions Report']);
+        fputcsv($out, [
+            'School Scope: ' . $activeSchoolDisplay,
+            'Status Filter: ' . $activeStatusLabel,
+            (!empty($activeSearchLabel) ? 'Search: ' . $activeSearchLabel : 'All Records'),
+            'Generated: ' . date('d M Y, h:i A')
+        ]);
+        fputcsv($out, []); // Blank separator row
 
-            <table class="orders-table">
-                <thead>
-                    <tr>
-                        <th class="center" style="width:45px;">Sl No</th>
-                        <th>Order Reference</th>
-                        <th>School Name</th>
-                        <th>Student Name</th>
-                        <th>Grade / Class</th>
-                        <th>Parent Name</th>
-                        <th>Parent Contact</th>
-                        <th class="center">Total Items</th>
-                        <th class="center">Payment</th>
-                        <th class="right">Total Value (INR)</th>
-                        <th class="center">Order Status</th>
-                        <th class="center">Order Date</th>
-                    </tr>
-                </thead>
-                <tbody>
-                    <?php if (empty($ordersList)): ?>
-                        <tr><td colspan="12" class="center" style="padding:20px; color:#64748B;">No purchasing records match the selected criteria.</td></tr>
-                    <?php else: ?>
-                        <?php $idx = 1; foreach ($ordersList as $o): ?>
-                            <tr>
-                                <td class="center"><?= $idx++ ?></td>
-                                <td class="num-text" style="font-weight:bold; color:#FF6702;"><?= htmlspecialchars($o['order_reference']) ?></td>
-                                <td><?= htmlspecialchars($o['school_name'] ?: 'School') ?></td>
-                                <td style="font-weight:bold;"><?= htmlspecialchars($o['student_name']) ?></td>
-                                <td><?= htmlspecialchars($o['grade_class']) ?></td>
-                                <td><?= htmlspecialchars($o['parent_name']) ?></td>
-                                <td class="num-text"><?= htmlspecialchars($o['mobile']) ?></td>
-                                <td class="center"><?= (int)$o['total_items'] ?> pcs</td>
-                                <td class="center"><?= htmlspecialchars($o['payment_status']) ?></td>
-                                <td class="currency"><?= number_format((float)$o['total_amount'], 2, '.', '') ?></td>
-                                <td class="center" style="font-weight:bold;"><?= htmlspecialchars($o['order_status']) ?></td>
-                                <td class="center"><?= date('d M Y', strtotime($o['created_at'])) ?></td>
-                            </tr>
-                        <?php endforeach; ?>
-                        <tr class="total-row">
-                            <td colspan="7" class="right" style="font-size:11pt; padding:8px 10px;">GRAND TOTAL:</td>
-                            <td class="center" style="font-size:11pt; padding:8px 10px;"><?= $totalItemsCount ?> pcs</td>
-                            <td></td>
-                            <td class="currency" style="font-size:11pt; color:#EA580C; padding:8px 10px;">₹<?= number_format($totalAmountSum, 2) ?></td>
-                            <td colspan="2"></td>
-                        </tr>
-                    <?php endif; ?>
-                </tbody>
-            </table>
-        </body>
-        </html>
-        <?php
+        // Column Headers
+        fputcsv($out, [
+            'Sl No',
+            'Order Reference',
+            'School Name',
+            'Student Name',
+            'Grade / Class',
+            'Parent Name',
+            'Parent Contact',
+            'Total Items',
+            'Payment Status',
+            'Total Value (INR)',
+            'Order Status',
+            'Order Date'
+        ]);
+
+        $idx = 1;
+        foreach ($ordersList as $o) {
+            fputcsv($out, [
+                $idx++,
+                $o['order_reference'],
+                $o['school_name'] ?: 'School',
+                $o['student_name'],
+                $o['grade_class'],
+                $o['parent_name'],
+                $o['mobile'],
+                $o['total_items'] . ' pcs',
+                $o['payment_status'],
+                number_format((float)$o['total_amount'], 2, '.', ''),
+                $o['order_status'],
+                date('d M Y, h:i A', strtotime($o['created_at']))
+            ]);
+        }
+
+        fputcsv($out, []); // Blank row before summary
+        fputcsv($out, [
+            '',
+            '',
+            '',
+            '',
+            '',
+            '',
+            'GRAND TOTAL:',
+            $totalItemsCount . ' pcs',
+            '',
+            number_format($totalAmountSum, 2, '.', ''),
+            '',
+            ''
+        ]);
+
+        fclose($out);
         exit;
     }
 
@@ -2234,6 +2187,7 @@ function generateOrdersPdf() {
         head: head,
         body: body,
         foot: foot,
+        showFoot: 'lastPage',
         startY: 33,
         theme: 'grid',
         headStyles: {
@@ -2302,9 +2256,9 @@ foreach ($ordersList as $idx => $o) {
     ];
 }
 ?>
-<!-- jsPDF & AutoTable for client-side vector PDF export -->
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js"></script>
+<!-- jsPDF & AutoTable for client-side vector PDF export (local bundled scripts) -->
+<script src="<?= BASE_URL ?>/assets/js/jspdf.umd.min.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/jspdf.plugin.autotable.min.js"></script>
 <script>
 window.REPORT_ORDERS_DATA = <?= json_encode($exportJsRows, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
 window.REPORT_META = {

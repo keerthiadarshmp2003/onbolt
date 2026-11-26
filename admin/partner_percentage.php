@@ -239,63 +239,52 @@ foreach ($reportRows as $r) {
     $grandTotalCommission += (float)$r['total_vendor_commission'];
 }
 
-// Handle Excel Export
-if (isset($_GET['export']) && strtolower($_GET['export']) === 'excel') {
+// Handle Excel / CSV Export
+if (isset($_GET['export']) && (strtolower($_GET['export']) === 'excel' || strtolower($_GET['export']) === 'csv')) {
     if (ob_get_level()) ob_end_clean();
-    $filename = "OnBolt_Partner_Percentage_Report_" . date('Y-m-d') . ".xls";
-    header("Content-Type: application/vnd.ms-excel; charset=utf-8");
+    $safeSchool = preg_replace('/[^a-zA-Z0-9_-]/', '_', $activeSchoolDisplay);
+    $filename = "OnBolt_Partner_Percentage_Report_{$safeSchool}_" . date('Y-m-d') . ".csv";
+    header("Content-Type: text/csv; charset=utf-8");
     header("Content-Disposition: attachment; filename=\"$filename\"");
-    echo "\xEF\xBB\xBF";
-    ?>
-    <html xmlns:o="urn:schemas-microsoft-com:office:office" xmlns:x="urn:schemas-microsoft-com:office:excel" xmlns="http://www.w3.org/TR/REC-html40">
-    <head>
-        <meta http-equiv="Content-Type" content="text/html; charset=utf-8">
-        <style>
-            body { font-family: Calibri, Arial, sans-serif; font-size: 11pt; }
-            .title { font-size: 16pt; font-weight: bold; color: #FF6702; padding: 10px 0 4px; }
-            table { border-collapse: collapse; width: 100%; }
-            th { background-color: #FF6702; color: #FFFFFF; font-weight: bold; border: 1px solid #EA580C; padding: 8px 10px; text-align: left; }
-            td { border: 1px solid #CBD5E1; padding: 6px 10px; }
-            .num { text-align: right; }
-            .center { text-align: center; }
-            .total { background-color: #FFF7ED; font-weight: bold; border-top: 2px solid #FF6702; }
-        </style>
-    </head>
-    <body>
-        <div class="title">ONBOLT - Partner Percentage &amp; Vendor Commission Report</div>
-        <p>School: <b><?= htmlspecialchars($activeSchoolDisplay) ?></b> &nbsp;|&nbsp; Generated on <?= date('d M Y, h:i A') ?></p>
-        <table>
-            <thead>
-                <tr>
-                    <th>Item</th>
-                    <th class="num">Amount (₹)</th>
-                    <th class="center">Quantity</th>
-                    <th class="num">Total MRP (₹)</th>
-                    <th class="num">Vendor Commission (₹)</th>
-                </tr>
-            </thead>
-            <tbody>
-                <?php foreach ($reportRows as $row): ?>
-                    <tr>
-                        <td><?= htmlspecialchars($row['item_name']) ?></td>
-                        <td class="num">₹<?= number_format((float)$row['amount'], 2) ?></td>
-                        <td class="center"><?= (int)$row['total_quantity'] ?></td>
-                        <td class="num">₹<?= number_format((float)$row['total_mrp'], 2) ?></td>
-                        <td class="num">₹<?= number_format((float)$row['total_vendor_commission'], 2) ?></td>
-                    </tr>
-                <?php endforeach; ?>
-                <tr class="total">
-                    <td>TOTAL SUMMARY</td>
-                    <td class="num">-</td>
-                    <td class="center"><?= $grandTotalQuantity ?> pcs</td>
-                    <td class="num">₹<?= number_format($grandTotalMRP, 2) ?></td>
-                    <td class="num">₹<?= number_format($grandTotalCommission, 2) ?></td>
-                </tr>
-            </tbody>
-        </table>
-    </body>
-    </html>
-    <?php
+    header("Pragma: no-cache");
+    header("Expires: 0");
+
+    $out = fopen('php://output', 'w');
+    fprintf($out, chr(0xEF) . chr(0xBB) . chr(0xBF)); // UTF-8 BOM
+
+    fputcsv($out, ['ONBOLT COMPLETE BRANDING SOLUTIONS - Partner Percentage & Vendor Commission Report']);
+    fputcsv($out, [
+        'School Scope: ' . $activeSchoolDisplay,
+        'Duration: ' . $activeDurationLabel,
+        'Generated: ' . date('d M Y, h:i A')
+    ]);
+    fputcsv($out, []); // Blank separator row
+
+    fputcsv($out, ['Sl No', 'Item Name', 'Unit Amount (INR)', 'Quantity Sold', 'Total MRP (INR)', 'Vendor Commission (INR)']);
+
+    $idx = 1;
+    foreach ($reportRows as $row) {
+        fputcsv($out, [
+            $idx++,
+            $row['item_name'],
+            number_format((float)$row['amount'], 2, '.', ''),
+            (int)$row['total_quantity'],
+            number_format((float)$row['total_mrp'], 2, '.', ''),
+            number_format((float)$row['total_vendor_commission'], 2, '.', '')
+        ]);
+    }
+
+    fputcsv($out, []); // Blank row before summary
+    fputcsv($out, [
+        '',
+        'TOTAL SUMMARY',
+        '',
+        $grandTotalQuantity . ' pcs',
+        number_format($grandTotalMRP, 2, '.', ''),
+        number_format($grandTotalCommission, 2, '.', '')
+    ]);
+
+    fclose($out);
     exit;
 }
 
@@ -630,11 +619,11 @@ require_once __DIR__ . '/header.php';
 
         <!-- Right Action Buttons in Same Line -->
         <div style="display:inline-flex; align-items:center; gap:0.5rem; flex-shrink:0;">
-            <a href="<?= BASE_URL ?>/admin/partner_percentage.php?export=excel<?= $exportQueryString ?>" class="btn btn-outline btn-sm" style="height:38px; color:#059669; border-color:#10B981; background:#ffffff; font-weight:700; padding:0.42rem 0.85rem; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Export filtered report to Excel">
+            <a href="<?= BASE_URL ?>/admin/partner_percentage.php?export=excel<?= $exportQueryString ?>" class="btn btn-outline btn-sm" style="height:38px; color:#059669; border-color:#10B981; background:#ffffff; font-weight:700; padding:0.42rem 0.85rem; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Export filtered report to Excel (.csv)">
                 📊 Excel Export
             </a>
-            <button type="button" onclick="window.print()" class="btn btn-outline btn-sm" style="height:38px; color:#DC2626; border-color:#EF4444; background:#ffffff; font-weight:700; padding:0.42rem 0.85rem; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Print or save as PDF">
-                📄 Print / PDF
+            <button type="button" onclick="exportPartnerPdf()" class="btn btn-outline btn-sm" style="height:38px; color:#DC2626; border-color:#EF4444; background:#ffffff; font-weight:700; padding:0.42rem 0.85rem; display:inline-flex; align-items:center; gap:5px; white-space:nowrap;" title="Export filtered report to PDF">
+                📄 PDF Export
             </button>
         </div>
     </div>
@@ -1069,6 +1058,131 @@ function sortReportTable(column, thElement) {
 
     // Re-append sorted rows to tbody
     rows.forEach(r => tbody.appendChild(r));
+}
+</script>
+
+<!-- jsPDF & AutoTable for client-side vector PDF export (local bundled scripts) -->
+<script src="<?= BASE_URL ?>/assets/js/jspdf.umd.min.js"></script>
+<script src="<?= BASE_URL ?>/assets/js/jspdf.plugin.autotable.min.js"></script>
+<script>
+<?php
+$partnerJsRows = [];
+foreach ($reportRows as $idx => $r) {
+    $partnerJsRows[] = [
+        (string)($idx + 1),
+        (string)$r['item_name'],
+        'Rs. ' . number_format((float)$r['amount'], 2),
+        (string)$r['total_quantity'] . ' pcs',
+        'Rs. ' . number_format((float)$r['total_mrp'], 2),
+        'Rs. ' . number_format((float)$r['total_vendor_commission'], 2)
+    ];
+}
+?>
+window.PARTNER_REPORT_DATA = <?= json_encode($partnerJsRows, JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+window.PARTNER_REPORT_META = {
+    school: <?= json_encode($activeSchoolDisplay) ?>,
+    duration: <?= json_encode($activeDurationLabel) ?>,
+    totalQty: <?= json_encode($grandTotalQuantity . ' pcs') ?>,
+    totalMRP: <?= json_encode('Rs. ' . number_format($grandTotalMRP, 2)) ?>,
+    totalCommission: <?= json_encode('Rs. ' . number_format($grandTotalCommission, 2)) ?>,
+    date: <?= json_encode(date('d M Y, h:i A')) ?>
+};
+
+function exportPartnerPdf() {
+    if (typeof window.jspdf === 'undefined' || typeof window.jspdf.jsPDF === 'undefined') {
+        window.print();
+        return;
+    }
+    try {
+        const { jsPDF } = window.jspdf;
+        const doc = new jsPDF({
+            orientation: 'portrait',
+            unit: 'mm',
+            format: 'a4'
+        });
+
+        // Top Brand Orange Bar
+        doc.setFillColor(255, 103, 2);
+        doc.rect(0, 0, 210, 18, 'F');
+
+        doc.setTextColor(255, 255, 255);
+        doc.setFont('helvetica', 'bold');
+        doc.setFontSize(13);
+        doc.text('ONBOLT COMPLETE BRANDING SOLUTIONS', 14, 11);
+
+        doc.setFontSize(8);
+        doc.setFont('helvetica', 'normal');
+        doc.text('Partner Percentage & Vendor Commission Report', 14, 15.5);
+
+        // Subtitle / Scope
+        doc.setTextColor(15, 23, 42);
+        doc.setFontSize(9);
+        doc.setFont('helvetica', 'bold');
+        doc.text(`School Scope: ${window.PARTNER_REPORT_META.school}   |   Duration: ${window.PARTNER_REPORT_META.duration}`, 14, 25);
+
+        const summaryText = `Quantity: ${window.PARTNER_REPORT_META.totalQty}  |  Total MRP: ${window.PARTNER_REPORT_META.totalMRP}  |  Vendor Commission: ${window.PARTNER_REPORT_META.totalCommission}  |  Generated: ${window.PARTNER_REPORT_META.date}`;
+        doc.setFontSize(7.5);
+        doc.setFont('helvetica', 'normal');
+        doc.setTextColor(100, 116, 139);
+        doc.text(summaryText, 14, 29.5);
+
+        const head = [['#', 'Item Name', 'Unit Amount', 'Quantity', 'Total MRP', 'Vendor Commission']];
+        const body = window.PARTNER_REPORT_DATA || [];
+        const foot = [['', 'TOTAL SUMMARY', '', window.PARTNER_REPORT_META.totalQty, window.PARTNER_REPORT_META.totalMRP, window.PARTNER_REPORT_META.totalCommission]];
+
+        doc.autoTable({
+            head: head,
+            body: body,
+            foot: foot,
+            showFoot: 'lastPage',
+            startY: 33,
+            theme: 'grid',
+            headStyles: {
+                fillColor: [255, 103, 2],
+                textColor: [255, 255, 255],
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 2
+            },
+            bodyStyles: {
+                fontSize: 7.5,
+                textColor: [15, 23, 42],
+                cellPadding: 2
+            },
+            alternateRowStyles: {
+                fillColor: [248, 250, 252]
+            },
+            footStyles: {
+                fillColor: [255, 247, 237],
+                textColor: [194, 65, 12],
+                fontStyle: 'bold',
+                fontSize: 8,
+                cellPadding: 2
+            },
+            columnStyles: {
+                0: { cellWidth: 10, halign: 'center' },
+                1: { cellWidth: 62 },
+                2: { cellWidth: 26, halign: 'right' },
+                3: { cellWidth: 24, halign: 'center', fontStyle: 'bold' },
+                4: { cellWidth: 30, halign: 'right', fontStyle: 'bold' },
+                5: { cellWidth: 30, halign: 'right', fontStyle: 'bold', textColor: [16, 185, 129] }
+            },
+            margin: { left: 14, right: 14, top: 33, bottom: 12 },
+            didDrawPage: function(data) {
+                const str = 'Page ' + doc.internal.getNumberOfPages();
+                doc.setFontSize(7.5);
+                doc.setTextColor(148, 163, 184);
+                doc.text(str, data.settings.margin.left, 287);
+                doc.text('OnBolt Digital Platform - Official Institutional Records', 130, 287);
+            }
+        });
+
+        const safeSchool = (window.PARTNER_REPORT_META.school || 'All').replace(/[^a-zA-Z0-9]/g, '_');
+        doc.save(`OnBolt_Partner_Percentage_Report_${safeSchool}_${new Date().toISOString().slice(0, 10)}.pdf`);
+    } catch (e) {
+        console.error('PDF export error:', e);
+        window.print();
+    }
 }
 </script>
 
