@@ -355,7 +355,7 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <!-- Gateway Status Filter -->
-        <div style="flex: 0 1 150px;">
+        <div style="flex: 0 1 190px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 Gateway Status
             </label>
@@ -477,13 +477,13 @@ require_once __DIR__ . '/header.php';
                 <tr>
                     <!-- Request ID -->
                     <td>
-                        <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: #475569; background: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-block;">
+                        <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: #475569; background: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-block; white-space: nowrap;">
                             <?= htmlspecialchars($displayReqId) ?>
                         </span>
                     </td>
 
                     <!-- Date -->
-                    <td>
+                    <td style="white-space: nowrap;">
                         <div style="font-weight: 700; color: #1E2530; font-size: 0.85rem; white-space: nowrap;">
                             <?= !empty($row['created_at']) ? date('d M Y', strtotime($row['created_at'])) : '—' ?>
                         </div>
@@ -512,21 +512,21 @@ require_once __DIR__ . '/header.php';
                     </td>
 
                     <!-- Phone Number -->
-                    <td>
-                        <a href="tel:<?= htmlspecialchars($row['mobile']) ?>" style="font-family: monospace; font-weight: 700; color: #0284C7; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                    <td style="white-space: nowrap;">
+                        <a href="tel:<?= htmlspecialchars($row['mobile']) ?>" style="font-family: monospace; font-weight: 700; color: #0284C7; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px; white-space: nowrap;">
                             <?= htmlspecialchars($row['mobile'] ?: '—') ?>
                         </a>
                     </td>
 
                     <!-- Status -->
-                    <td style="text-align: center;">
+                    <td style="text-align: center; white-space: nowrap;">
                         <?php if ($pStatus === 'Failed'): ?>
-                            <span style="display: inline-block; padding: 4px 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">
-                                ✕ FAILED
+                            <span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
+                                <span>✕</span> <span>FAILED</span>
                             </span>
                         <?php else: ?>
-                            <span style="display: inline-block; padding: 4px 10px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">
-                                ⏳ PENDING
+                            <span style="display: inline-flex; align-items: center; justify-content: center; gap: 4px; padding: 4px 10px; background: #FFFBEB; color: #D97706; border: 1px solid #FDE68A; border-radius: 9999px; font-size: 0.75rem; font-weight: 800; white-space: nowrap;">
+                                <span>⏳</span> <span>PENDING</span>
                             </span>
                         <?php endif; ?>
                     </td>
