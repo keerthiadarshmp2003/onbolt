@@ -12,6 +12,7 @@ declare(strict_types=1);
 require_once __DIR__ . '/../config/app.php';
 require_once __DIR__ . '/../includes/functions.php';
 require_once __DIR__ . '/../includes/auth.php';
+require_once __DIR__ . '/../includes/edviron.php';
 
 $admin = requireAdminAuth();
 if (!adminCan('create_order_manage')) {
@@ -24,6 +25,56 @@ $adminTitle = 'Direct Walk-in Order Desk';
 $adminActive = 'create_order';
 
 $pdo = getDbConnection();
+
+// ==================== AJAX GATEWAY STATUS CHECKER ====================
+if (isset($_GET['ajax_check_gateway_status'])) {
+    if (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $collectId = trim($_GET['collect_id'] ?? '');
+    $orderId = (int)($_GET['order_id'] ?? 0);
+
+    if (empty($collectId)) {
+        echo json_encode(['success' => false, 'is_paid' => false, 'message' => 'Missing collect id']);
+        exit;
+    }
+
+    $statusRes = edviron_get_status_by_collect_id($collectId);
+    $data = $statusRes['data'] ?? [];
+    $rawStatus = strtoupper(trim((string)($data['status'] ?? 'PENDING')));
+
+    $isSuccess = ($rawStatus === 'SUCCESS' || (isset($data['status_code']) && (int)$data['status_code'] === 200 && $rawStatus !== 'FAILED' && $rawStatus !== 'NOT INITIATED'));
+
+    if ($isSuccess && $orderId > 0) {
+        $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed' WHERE id = ?")->execute([$orderId]);
+        $pdo->prepare("UPDATE payments SET status = 'Completed' WHERE order_id = ?")->execute([$orderId]);
+    }
+
+    echo json_encode([
+        'success'    => true,
+        'is_paid'    => $isSuccess,
+        'status'     => $rawStatus,
+        'collect_id' => $collectId,
+        'order_id'   => $orderId
+    ]);
+    exit;
+}
+
+// ==================== AJAX MANUAL GATEWAY VERIFICATION ====================
+if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['action'] === 'manual_verify_gateway_paid') {
+    if (ob_get_level()) ob_end_clean();
+    header('Content-Type: application/json; charset=utf-8');
+
+    $orderId = (int)($_POST['order_id'] ?? 0);
+    if ($orderId > 0) {
+        $pdo->prepare("UPDATE orders SET payment_status = 'Paid', order_status = 'Confirmed' WHERE id = ?")->execute([$orderId]);
+        $pdo->prepare("UPDATE payments SET status = 'Completed' WHERE order_id = ?")->execute([$orderId]);
+        echo json_encode(['success' => true]);
+    } else {
+        echo json_encode(['success' => false, 'error' => 'Invalid order ID']);
+    }
+    exit;
+}
 
 // ==================== AJAX PRODUCT FETCHER ====================
 if (isset($_GET['ajax_get_school_products'])) {
@@ -622,7 +673,42 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
         $handoverAt = ($fulfillmentType === 'Counter' && $orderStatus === 'Completed') ? date('Y-m-d H:i:s') : null;
         $handoverStaff = $adminName;
         $handoverRecipient = $parentName . " (" . $studentName . ")";
-        $finalWalkinTxn = !empty($paymentRef) ? $paymentRef : ('WALKIN-' . strtoupper(bin2hex(random_bytes(4))));
+
+        // Real Gateway Integration using Edviron details for UPI / QR Scan
+        $isGatewayPayment = ($paymentMethod === 'Direct UPI / QR');
+        $collectUrl = '';
+        $collectId = '';
+
+        if ($isGatewayPayment) {
+            $callbackUrl = BASE_URL . '/schools/payment_callback.php?order=' . urlencode($orderRef);
+            $collectRes = edviron_create_collect_request([
+                'amount'           => $totalAmount,
+                'order_reference'  => $orderRef,
+                'order_id'         => $orderRef,
+                'custom_order_id'  => $orderRef,
+                'callback_url'     => $callbackUrl,
+                'student_id'       => '-',
+                'student_name'     => $studentName,
+                'student_email'    => !empty($email) ? $email : 'parent@onbolt.in',
+                'student_phone_no' => !empty($mobile) ? $mobile : '9876543210',
+                'additional_data'  => [
+                    'grade_class'  => $gradeClass,
+                    'order_ref'    => $orderRef,
+                    'parent_name'  => $parentName,
+                    'school_id'    => $schoolCode
+                ]
+            ]);
+
+            if ($collectRes['success'] && !empty($collectRes['collect_request_url'])) {
+                $collectUrl = $collectRes['collect_request_url'];
+                $collectId = $collectRes['collect_request_id'] ?? '';
+                $finalWalkinTxn = !empty($collectId) ? $collectId : ('TXN-' . strtoupper(bin2hex(random_bytes(6))));
+            } else {
+                throw new Exception('Payment Gateway Error: ' . ($collectRes['error'] ?? 'Unable to connect to gateway'));
+            }
+        } else {
+            $finalWalkinTxn = !empty($paymentRef) ? $paymentRef : ('WALKIN-' . strtoupper(bin2hex(random_bytes(4))));
+        }
 
         // Begin Transaction
         $pdo->beginTransaction();
@@ -632,7 +718,7 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             mobile, alt_mobile, email, delivery_address, pincode, state, total_items,
             subtotal, shipping_fee, tax_amount, total_amount, payment_status, payment_method,
             order_status, admin_notes, fulfillment_type, handover_staff, handover_recipient, handover_at, created_at, updated_at
-        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
+        ) VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, 0.00, 0.00, ?, ?, ?, ?, ?, ?, ?, ?, ?, NOW(), NOW())");
 
         $orderInsert->execute([
             $orderRef,
@@ -726,6 +812,10 @@ if ($_SERVER['REQUEST_METHOD'] === 'POST' && isset($_POST['action']) && $_POST['
             'school_name' => $targetSchoolRow['name'] ?? 'School',
             'payment_method' => $paymentMethod,
             'payment_status' => $paymentStatus,
+            'gateway_transaction_id' => $finalWalkinTxn,
+            'is_gateway' => $isGatewayPayment,
+            'collect_url' => $collectUrl,
+            'collect_id' => $collectId,
             'receipt_url' => BASE_URL . "/admin/create_order.php?print_receipt={$orderId}"
         ];
 
@@ -1143,6 +1233,13 @@ require_once __DIR__ . '/header.php';
     from { transform: scale(0.85); opacity: 0; }
     to { transform: scale(1); opacity: 1; }
 }
+@keyframes gwPulse {
+    0%, 100% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.35; transform: scale(1.3); }
+}
+.gw-pulse {
+    animation: gwPulse 1.5s infinite ease-in-out;
+}
 </style>
 
 <!-- Top Notification Bar -->
@@ -1382,6 +1479,16 @@ require_once __DIR__ . '/header.php';
                         </label>
                     </div>
 
+                    <!-- UPI Gateway Info Box -->
+                    <div id="upiGatewayInfo" style="display:none; background:#EFF6FF; border:1px solid #BFDBFE; border-radius:var(--radius-md); padding:0.85rem; margin-top:0.75rem; margin-bottom:1rem; text-align:left;">
+                        <div style="font-size:0.75rem; font-weight:800; color:#1E40AF; text-transform:uppercase; margin-bottom:0.25rem; display:flex; align-items:center; gap:6px;">
+                            <span>⚡</span> Live Payment Gateway &amp; UPI QR Desk
+                        </div>
+                        <p style="font-size:0.8rem; color:#1E3A8A; margin:0; line-height:1.4;">
+                            Submitting will automatically connect with the payment gateway to generate a dynamic UPI QR code. The customer can scan directly from the screen, and the transaction ID will be verified in real time.
+                        </p>
+                    </div>
+
                     <!-- Cash Tender Calculator -->
                     <div id="cashCalculatorWrap" style="display:none; background:#F0FDF4; border:1px solid #BBF7D0; border-radius:var(--radius-md); padding:0.85rem; margin-bottom:1rem;">
                         <div style="font-size:0.75rem; font-weight:800; color:#166534; text-transform:uppercase; margin-bottom:0.4rem;">
@@ -1440,6 +1547,66 @@ require_once __DIR__ . '/header.php';
         </div>
     </div>
 </form>
+
+<!-- POPUP MODAL: LIVE GATEWAY PAYMENT & QR SCAN -->
+<div id="gatewayPaymentModal" class="desk-modal-overlay" style="display:none;">
+    <div class="desk-modal-card" style="max-width:480px; padding:1.75rem;">
+        <div style="display:flex; justify-content:space-between; align-items:center; margin-bottom:1rem; border-bottom:1px solid #E2E8F0; padding-bottom:0.75rem;">
+            <div style="text-align:left;">
+                <span style="font-size:0.72rem; font-weight:800; text-transform:uppercase; color:var(--brand-primary); letter-spacing:0.5px;">Live Payment Desk</span>
+                <h3 style="font-size:1.15rem; font-weight:800; color:var(--brand-dark); margin:0;">UPI &amp; QR Payment</h3>
+            </div>
+            <button type="button" onclick="closeGatewayModal()" style="background:none; border:none; font-size:1.4rem; line-height:1; color:#94A3B8; cursor:pointer;" title="Close">&times;</button>
+        </div>
+
+        <div style="text-align:center; margin-bottom:1.25rem;">
+            <div style="background:#F8FAFC; border:1.5px dashed #CBD5E1; border-radius:16px; padding:1.25rem; display:inline-block; margin-bottom:0.75rem;">
+                <img id="gwQrImg" src="" alt="UPI QR Code" style="width:210px; height:210px; display:block; border-radius:8px; background:#fff;">
+            </div>
+            <div style="font-size:0.82rem; color:#64748B;">
+                Scan with any UPI App: <strong>GPay, PhonePe, Paytm, BHIM</strong>
+            </div>
+        </div>
+
+        <div style="background:#F8FAFC; border:1px solid #E2E8F0; border-radius:var(--radius-md); padding:0.85rem 1rem; margin-bottom:1rem; text-align:left; font-size:0.85rem;">
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748B;">Order Ref:</span>
+                <strong id="gwOrderRef" style="color:var(--brand-primary);">-</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748B;">Payable Amount:</span>
+                <strong id="gwAmount" style="color:#16A34A; font-size:1rem;">-</strong>
+            </div>
+            <div style="display:flex; justify-content:space-between; margin-bottom:4px;">
+                <span style="color:#64748B;">Student:</span>
+                <span id="gwStudent" style="font-weight:700; color:#1E293B;">-</span>
+            </div>
+            <div style="display:flex; justify-content:space-between; align-items:center;">
+                <span style="color:#64748B;">Gateway Txn ID:</span>
+                <span id="gwTxnId" style="font-family:monospace; font-size:0.75rem; background:#E2E8F0; color:#0F172A; padding:2px 6px; border-radius:4px; max-width:210px; overflow:hidden; text-overflow:ellipsis; white-space:nowrap;">-</span>
+            </div>
+        </div>
+
+        <div id="gwStatusBox" style="margin-bottom:1.25rem; padding:0.6rem 1rem; border-radius:9999px; font-size:0.82rem; font-weight:700; display:inline-flex; align-items:center; gap:8px; background:#FEF3C7; color:#92400E;">
+            <span class="gw-pulse" style="width:8px; height:8px; border-radius:50%; background:#D97706; display:inline-block;"></span>
+            <span id="gwStatusText">Waiting for parent to scan &amp; pay...</span>
+        </div>
+
+        <div style="display:flex; flex-direction:column; gap:0.5rem;">
+            <a id="gwOpenLinkBtn" href="#" target="_blank" class="btn btn-outline" style="padding:0.6rem; font-size:0.85rem; font-weight:700; display:flex; align-items:center; justify-content:center; gap:6px;">
+                <span>🔗 Open Live Payment Checkout Page</span>
+            </a>
+            <div style="display:grid; grid-template-columns: 1fr 1fr; gap:0.5rem;">
+                <button type="button" id="gwManualVerifyBtn" onclick="manualVerifyGatewayPaid()" class="btn btn-primary" style="padding:0.65rem; font-size:0.82rem; font-weight:800; background:#10B981; border-color:#10B981;">
+                    ✓ Mark as Paid
+                </button>
+                <button type="button" onclick="completeGatewayOrder()" class="btn btn-primary" style="padding:0.65rem; font-size:0.82rem; font-weight:800;">
+                    🖨️ View Receipt
+                </button>
+            </div>
+        </div>
+    </div>
+</div>
 
 <!-- POPUP MODAL: ORDER CREATED SUCCESSFULLY -->
 <div id="orderSuccessModal" class="desk-modal-overlay" style="display:none;">
@@ -1840,16 +2007,21 @@ function setPaymentMethod(method, cardEl) {
     const cashWrap = document.getElementById('cashCalculatorWrap');
     const refWrap = document.getElementById('paymentRefWrap');
     const refLabel = document.getElementById('paymentRefLabel');
+    const upiInfo = document.getElementById('upiGatewayInfo');
 
     if (method === 'Cash (Counter)') {
         cashWrap.style.display = 'block';
         refWrap.style.display = 'none';
+        if (upiInfo) upiInfo.style.display = 'none';
+    } else if (method === 'Direct UPI / QR') {
+        cashWrap.style.display = 'none';
+        refWrap.style.display = 'none';
+        if (upiInfo) upiInfo.style.display = 'block';
     } else {
         cashWrap.style.display = 'none';
         refWrap.style.display = 'block';
-        if (method === 'Direct UPI / QR') {
-            refLabel.textContent = 'UPI Transaction ID / UTR Number (Optional)';
-        } else if (method === 'Card / POS') {
+        if (upiInfo) upiInfo.style.display = 'none';
+        if (method === 'Card / POS') {
             refLabel.textContent = 'Card Slip / Auth Code (Optional)';
         } else {
             refLabel.textContent = 'Bank Transaction Reference (Optional)';
@@ -1954,7 +2126,11 @@ function handleOrderSubmit(e) {
         btn.innerHTML = origHtml;
 
         if (data.success && data.data) {
-            showSuccessModal(data.data);
+            if (data.data.is_gateway && data.data.collect_url) {
+                showGatewayModal(data.data);
+            } else {
+                showSuccessModal(data.data);
+            }
         } else {
             alert('Error creating order: ' + (data.error || 'Unknown error occurred.'));
         }
@@ -1967,6 +2143,115 @@ function handleOrderSubmit(e) {
     });
 
     return false;
+}
+
+let GW_ACTIVE_DATA = null;
+let GW_POLL_TIMER = null;
+
+function showGatewayModal(data) {
+    GW_ACTIVE_DATA = data;
+    ACTIVE_RECEIPT_URL = data.receipt_url;
+
+    document.getElementById('gwOrderRef').textContent = '#' + data.order_reference;
+    document.getElementById('gwAmount').textContent = data.total_formatted;
+    document.getElementById('gwStudent').textContent = data.student_name;
+    document.getElementById('gwTxnId').textContent = data.gateway_transaction_id || data.collect_id || '-';
+    document.getElementById('gwOpenLinkBtn').href = data.collect_url;
+
+    // Generate dynamic QR code
+    const qrUrl = 'https://api.qrserver.com/v1/create-qr-code/?size=240x240&margin=8&data=' + encodeURIComponent(data.collect_url);
+    document.getElementById('gwQrImg').src = qrUrl;
+
+    // Reset status box
+    const statusBox = document.getElementById('gwStatusBox');
+    const statusText = document.getElementById('gwStatusText');
+    statusBox.style.background = '#FEF3C7';
+    statusBox.style.color = '#92400E';
+    statusText.textContent = 'Waiting for parent to scan & pay...';
+
+    const verifyBtn = document.getElementById('gwManualVerifyBtn');
+    verifyBtn.disabled = false;
+    verifyBtn.textContent = '✓ Mark as Paid';
+
+    document.getElementById('gatewayPaymentModal').style.display = 'flex';
+
+    // Start auto polling every 3 seconds
+    clearInterval(GW_POLL_TIMER);
+    if (data.collect_id && data.order_id) {
+        GW_POLL_TIMER = setInterval(() => {
+            fetch('<?= BASE_URL ?>/admin/create_order.php?ajax_check_gateway_status=1&collect_id=' + encodeURIComponent(data.collect_id) + '&order_id=' + data.order_id)
+                .then(res => res.json())
+                .then(res => {
+                    if (res && res.is_paid) {
+                        clearInterval(GW_POLL_TIMER);
+                        gwPaymentSuccess();
+                    }
+                })
+                .catch(() => {});
+        }, 3000);
+    }
+}
+
+function gwPaymentSuccess() {
+    const statusBox = document.getElementById('gwStatusBox');
+    const statusText = document.getElementById('gwStatusText');
+    statusBox.style.background = '#DCFCE7';
+    statusBox.style.color = '#166534';
+    statusText.innerHTML = '✓ Payment Confirmed via Gateway!';
+    if (GW_ACTIVE_DATA) {
+        GW_ACTIVE_DATA.payment_status = 'Paid';
+    }
+    const verifyBtn = document.getElementById('gwManualVerifyBtn');
+    verifyBtn.textContent = '✓ Verified Paid';
+    verifyBtn.disabled = true;
+}
+
+function manualVerifyGatewayPaid() {
+    if (!GW_ACTIVE_DATA || !GW_ACTIVE_DATA.order_id) return;
+    const btn = document.getElementById('gwManualVerifyBtn');
+    btn.disabled = true;
+    btn.textContent = 'Verifying...';
+
+    const formData = new FormData();
+    formData.append('action', 'manual_verify_gateway_paid');
+    formData.append('order_id', GW_ACTIVE_DATA.order_id);
+
+    fetch('<?= BASE_URL ?>/admin/create_order.php', {
+        method: 'POST',
+        body: formData
+    })
+    .then(res => res.json())
+    .then(res => {
+        if (res && res.success) {
+            clearInterval(GW_POLL_TIMER);
+            gwPaymentSuccess();
+        } else {
+            btn.disabled = false;
+            btn.textContent = '✓ Mark as Paid';
+            alert('Could not update status: ' + (res.error || 'Server error'));
+        }
+    })
+    .catch(() => {
+        btn.disabled = false;
+        btn.textContent = '✓ Mark as Paid';
+        alert('Network error while verifying payment.');
+    });
+}
+
+function completeGatewayOrder() {
+    clearInterval(GW_POLL_TIMER);
+    document.getElementById('gatewayPaymentModal').style.display = 'none';
+    if (GW_ACTIVE_DATA) {
+        showSuccessModal(GW_ACTIVE_DATA);
+    }
+}
+
+function closeGatewayModal() {
+    clearInterval(GW_POLL_TIMER);
+    document.getElementById('gatewayPaymentModal').style.display = 'none';
+    if (GW_ACTIVE_DATA) {
+        showSuccessModal(GW_ACTIVE_DATA);
+    }
 }
 
 function showSuccessModal(data) {
@@ -1984,8 +2269,15 @@ function showSuccessModal(data) {
 }
 
 function startNewOrder() {
+    clearInterval(GW_POLL_TIMER);
+    GW_ACTIVE_DATA = null;
     document.getElementById('orderSuccessModal').style.display = 'none';
+    document.getElementById('gatewayPaymentModal').style.display = 'none';
     document.getElementById('directOrderForm').reset();
+    document.querySelectorAll('.payment-option-card').forEach(c => c.classList.remove('active'));
+    document.querySelectorAll('.gender-pill').forEach(p => p.classList.remove('active'));
+    const upiInfo = document.getElementById('upiGatewayInfo');
+    if (upiInfo) upiInfo.style.display = 'none';
     ORDER_CART = [];
     renderCart();
     document.getElementById('schoolBadge').style.display = 'none';
