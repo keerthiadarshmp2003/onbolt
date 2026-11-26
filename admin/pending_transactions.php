@@ -213,12 +213,56 @@ $pendingList = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
 // Fetch items for each pending order
 $orderItemsMap = [];
+$pendingDataMap = [];
 if (!empty($pendingList)) {
     $orderIds = array_column($pendingList, 'id');
     $inClause = implode(',', array_map('intval', $orderIds));
     $itemsStmt = $pdo->query("SELECT order_id, product_name, size, quantity, unit_price, total_price FROM order_items WHERE order_id IN ({$inClause})");
     while ($it = $itemsStmt->fetch(PDO::FETCH_ASSOC)) {
         $orderItemsMap[$it['order_id']][] = $it;
+    }
+
+    foreach ($pendingList as $pRow) {
+        $pId = (int)$pRow['id'];
+        $dispReqId = !empty($pRow['payment_request_id']) ? $pRow['payment_request_id'] : ('REQ-' . str_pad((string)$pId, 6, '0', STR_PAD_LEFT));
+        $pItems = $orderItemsMap[$pId] ?? [];
+        $formattedItems = [];
+        foreach ($pItems as $it) {
+            $formattedItems[] = [
+                'name' => $it['product_name'],
+                'size' => $it['size'],
+                'quantity' => (int)$it['quantity'],
+                'unit_price' => (float)$it['unit_price'],
+                'total_price' => (float)$it['total_price']
+            ];
+        }
+        $cleanPhone = preg_replace('/[^0-9]/', '', $pRow['mobile'] ?? '');
+        if (strlen($cleanPhone) === 10) $cleanPhone = '91' . $cleanPhone;
+        $waText = "Hello " . ($pRow['parent_name'] ?? 'Parent') . ", this is OnBolt Uniforms regarding your checkout attempt (" . $dispReqId . ") for " . ($pRow['student_name'] ?? 'your ward') . " at " . ($pRow['school_name'] ?? 'School') . ". Need assistance completing your order?";
+
+        $pendingDataMap[$pId] = [
+            'id' => $pId,
+            'req_id' => $dispReqId,
+            'created_at' => !empty($pRow['created_at']) ? date('d M Y, h:i A', strtotime($pRow['created_at'])) : '—',
+            'status' => $pRow['payment_status'] ?? 'Pending',
+            'school_name' => $pRow['school_name'] ?? '—',
+            'school_code' => $pRow['school_code'] ?? '',
+            'student_name' => $pRow['student_name'] ?? '—',
+            'grade_class' => $pRow['grade_class'] ?? '—',
+            'gender' => $pRow['gender'] ?? '',
+            'parent_name' => $pRow['parent_name'] ?? 'Not Specified',
+            'mobile' => $pRow['mobile'] ?? '',
+            'alt_mobile' => $pRow['alt_mobile'] ?? '',
+            'email' => $pRow['email'] ?? '',
+            'address' => $pRow['delivery_address'] ?? '',
+            'pincode' => $pRow['pincode'] ?? '',
+            'total_amount' => (float)$pRow['total_amount'],
+            'total_amount_formatted' => formatCurrency((float)$pRow['total_amount']),
+            'payment_method' => formatDisplayPaymentMethod($pRow['payment_method'], $pRow['gateway_response'] ?? null),
+            'txn_id' => !empty($pRow['gateway_transaction_id']) ? $pRow['gateway_transaction_id'] : (!empty($pRow['gateway_txn_ref']) ? $pRow['gateway_txn_ref'] : '—'),
+            'items' => $formattedItems,
+            'wa_url' => "https://wa.me/{$cleanPhone}?text=" . urlencode($waText)
+        ];
     }
 }
 
@@ -398,7 +442,7 @@ require_once __DIR__ . '/header.php';
         <thead>
             <tr>
                 <th style="width: 130px;">Request ID</th>
-                <th style="min-width: 130px;">
+                <th style="width: 140px;">
                     <a href="?<?= http_build_query(array_merge($_GET, ['sort_date' => $sortDate === 'asc' ? 'desc' : 'asc'])) ?>" 
                        style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" 
                        title="Sort by Date (Currently <?= $sortDate === 'asc' ? 'Oldest First - Click for Newest' : 'Newest First - Click for Oldest' ?>)">
@@ -406,18 +450,17 @@ require_once __DIR__ . '/header.php';
                         <span style="font-size: 0.75rem; color: #EA580C; font-weight: 800;"><?= $sortDate === 'asc' ? '▲' : '▼' ?></span>
                     </a>
                 </th>
-                <th style="min-width: 160px;">Parent Details</th>
-                <th style="min-width: 150px;">Student &amp; Class</th>
-                <th style="min-width: 150px;">School</th>
-                <th style="min-width: 100px;">Items</th>
-                <th style="width: 110px; text-align: right;">Amount</th>
+                <th style="min-width: 160px;">Parent Name</th>
+                <th style="min-width: 160px;">Student Name</th>
+                <th style="width: 140px;">Phone Number</th>
                 <th style="width: 130px; text-align: center;">Status</th>
+                <th style="width: 80px; text-align: center;">Action</th>
             </tr>
         </thead>
         <tbody>
             <?php if (empty($pendingList)): ?>
                 <tr>
-                    <td colspan="8" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
+                    <td colspan="7" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
                         <div style="font-size: 1.15rem; font-weight: 800; color: #1E2530;">No Incomplete Attempts Found</div>
                         <p style="font-size: 0.88rem; margin-top: 0.25rem;">
@@ -430,13 +473,6 @@ require_once __DIR__ . '/header.php';
                     $orderId = (int)$row['id'];
                     $displayReqId = !empty($row['payment_request_id']) ? $row['payment_request_id'] : ('REQ-' . str_pad((string)$orderId, 6, '0', STR_PAD_LEFT));
                     $pStatus = $row['payment_status'] ?? 'Pending';
-                    $items = $orderItemsMap[$orderId] ?? [];
-                    $phoneClean = preg_replace('/[^0-9]/', '', $row['mobile'] ?? '');
-                    if (strlen($phoneClean) === 10) {
-                        $phoneClean = '91' . $phoneClean;
-                    }
-                    $waText = "Hello " . ($row['parent_name'] ?? 'Parent') . ", this is OnBolt Uniforms regarding your checkout attempt (" . $displayReqId . ") for " . ($row['student_name'] ?? 'your ward') . " at " . ($row['school_name'] ?? 'School') . ". Need assistance completing your order?";
-                    $waUrl = "https://wa.me/{$phoneClean}?text=" . urlencode($waText);
                 ?>
                 <tr>
                     <!-- Request ID -->
@@ -456,66 +492,33 @@ require_once __DIR__ . '/header.php';
                         </div>
                     </td>
 
-                    <!-- Parent Details -->
+                    <!-- Parent Name -->
                     <td>
-                        <div style="font-weight: 800; color: #1E2530;">
+                        <div style="font-weight: 800; color: #1E2530; font-size: 0.9rem;">
                             <?= htmlspecialchars($row['parent_name'] ?: 'Not Specified') ?>
                         </div>
-                        <div style="margin-top: 3px;">
-                            <span style="font-weight: 700; color: #0284C7; font-size: 0.85rem;">
-                                <?= htmlspecialchars($row['mobile']) ?>
-                            </span>
+                    </td>
+
+                    <!-- Student Name -->
+                    <td>
+                        <div style="font-weight: 700; color: #1E2530; font-size: 0.9rem;">
+                            <?= htmlspecialchars($row['student_name'] ?: '—') ?>
                         </div>
-                        <?php if (!empty($row['email'])): ?>
-                            <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px;">
-                                <?= htmlspecialchars($row['email']) ?>
+                        <?php if (!empty($row['grade_class'])): ?>
+                            <div style="font-size: 0.76rem; color: #64748B; margin-top: 2px;">
+                                Class: <strong><?= htmlspecialchars($row['grade_class']) ?></strong>
                             </div>
                         <?php endif; ?>
                     </td>
 
-                    <!-- Student & Class -->
+                    <!-- Phone Number -->
                     <td>
-                        <div style="font-weight: 700; color: #1E2530;">
-                            <?= htmlspecialchars($row['student_name'] ?: '—') ?>
-                        </div>
-                        <div style="font-size: 0.78rem; color: #64748B;">
-                            Class: <strong><?= htmlspecialchars($row['grade_class'] ?: '—') ?></strong>
-                            <?php if (!empty($row['gender'])): ?>
-                                <span style="margin-left: 4px; font-size: 0.7rem; background: #F1F5F9; padding: 2px 5px; border-radius: 4px;"><?= htmlspecialchars($row['gender']) ?></span>
-                            <?php endif; ?>
-                        </div>
+                        <a href="tel:<?= htmlspecialchars($row['mobile']) ?>" style="font-family: monospace; font-weight: 700; color: #0284C7; font-size: 0.9rem; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;">
+                            <?= htmlspecialchars($row['mobile'] ?: '—') ?>
+                        </a>
                     </td>
 
-                    <!-- School -->
-                    <td>
-                        <div style="font-weight: 700; color: #334155; font-size: 0.85rem;">
-                            <?= htmlspecialchars($row['school_name'] ?? '—') ?>
-                        </div>
-                        <?php if (!empty($row['school_code'])): ?>
-                            <span style="font-size: 0.68rem; font-weight: 800; color: #FF6702; background: #FFF7ED; padding: 2px 6px; border-radius: 4px;">
-                                <?= htmlspecialchars($row['school_code']) ?>
-                            </span>
-                        <?php endif; ?>
-                    </td>
-
-                    <!-- Items Summary -->
-                    <td>
-                        <div style="font-size: 0.85rem; color: #1E2530; font-weight: 700;">
-                            <?= count($items) ?> item<?= count($items) !== 1 ? 's' : '' ?>
-                        </div>
-                    </td>
-
-                    <!-- Payable Amount -->
-                    <td style="text-align: right;">
-                        <div style="font-weight: 800; color: #1E2530; font-size: 0.95rem;">
-                            <?= formatCurrency((float)$row['total_amount']) ?>
-                        </div>
-                        <div style="font-size: 0.72rem; font-weight: 600; color: #64748B;">
-                            <?= htmlspecialchars(formatDisplayPaymentMethod($row['payment_method'], $row['gateway_response'] ?? null)) ?>
-                        </div>
-                    </td>
-
-                    <!-- Status Badge -->
+                    <!-- Status -->
                     <td style="text-align: center;">
                         <?php if ($pStatus === 'Failed'): ?>
                             <span style="display: inline-block; padding: 4px 10px; background: #FEF2F2; color: #DC2626; border: 1px solid #FECACA; border-radius: 9999px; font-size: 0.75rem; font-weight: 800;">
@@ -526,19 +529,160 @@ require_once __DIR__ . '/header.php';
                                 ⏳ PENDING
                             </span>
                         <?php endif; ?>
-                        <?php 
-                        $displayTxnId = !empty($row['gateway_transaction_id']) ? $row['gateway_transaction_id'] : ($row['gateway_txn_ref'] ?? '');
-                        if (!empty($displayTxnId)): ?>
-                            <div style="font-size: 0.68rem; color: #0284C7; font-weight: 700; margin-top: 4px; font-family: monospace; background: #F0F9FF; padding: 2px 6px; border-radius: 4px; display: inline-block; word-break: break-all;" title="Gateway Transaction ID: <?= htmlspecialchars($displayTxnId) ?>">
-                                Txn: <?= htmlspecialchars($displayTxnId) ?>
-                            </div>
-                        <?php endif; ?>
+                    </td>
+
+                    <!-- Action: Eye Icon Only -->
+                    <td style="text-align: center;">
+                        <button type="button" 
+                                class="btn btn-outline btn-sm" 
+                                style="padding: 0.45rem 0.65rem; line-height: 1; display: inline-flex; align-items: center; justify-content: center; color: #2563EB; border-color: #BFDBFE; background: #F8FAFC; border-radius: 8px; cursor: pointer; transition: all 0.2s;" 
+                                title="View Details" 
+                                onclick="openPendingDetailsModal(<?= $orderId ?>)"
+                                onmouseover="this.style.background='#EFF6FF'; this.style.borderColor='#2563EB';"
+                                onmouseout="this.style.background='#F8FAFC'; this.style.borderColor='#BFDBFE';">
+                            <svg width="17" height="17" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round">
+                                <path d="M1 12s4-8 11-8 11 8 11 8-4 8-11 8-11-8-11-8z"></path>
+                                <circle cx="12" cy="12" r="3"></circle>
+                            </svg>
+                        </button>
                     </td>
                 </tr>
                 <?php endforeach; ?>
             <?php endif; ?>
         </tbody>
     </table>
+</div>
+
+<!-- ==================== TRANSACTION DETAILS VIEW POPUP MODAL ==================== -->
+<div id="pendingDetailsModal" style="display: none; position: fixed; inset: 0; z-index: 9999; background: rgba(15, 23, 42, 0.65); backdrop-filter: blur(4px); align-items: center; justify-content: center; padding: 1.5rem;">
+    <div style="background: #ffffff; border-radius: 20px; max-width: 680px; width: 100%; max-height: 90vh; display: flex; flex-direction: column; box-shadow: 0 25px 50px -12px rgba(0,0,0,0.25); border: 1px solid #E2E8F0; overflow: hidden; animation: popIn 0.2s ease-out;">
+        
+        <!-- Header -->
+        <div style="padding: 1.25rem 1.5rem; background: #0F172A; color: #ffffff; display: flex; align-items: center; justify-content: space-between; flex-shrink: 0;">
+            <div>
+                <div style="display: flex; align-items: center; gap: 8px;">
+                    <span style="font-size: 0.7rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.08em; color: #38BDF8;">Requisition Details</span>
+                    <span id="pdm-status-badge" style="display: inline-block; padding: 2px 8px; border-radius: 9999px; font-size: 0.72rem; font-weight: 800;"></span>
+                </div>
+                <h3 style="margin: 0.25rem 0 0; font-size: 1.25rem; font-weight: 800; color: #ffffff; display: flex; align-items: center; gap: 8px;">
+                    Request <span id="pdm-req-id" style="font-family: monospace; color: #F59E0B;"></span>
+                </h3>
+                <div style="font-size: 0.78rem; color: #94A3B8; margin-top: 3px;">
+                    Attempt Date: <span id="pdm-date" style="color: #E2E8F0; font-weight: 600;"></span>
+                </div>
+            </div>
+            <button type="button" onclick="closePendingDetailsModal()" style="background: transparent; border: none; color: #94A3B8; font-size: 1.6rem; cursor: pointer; line-height: 1; padding: 4px; border-radius: 6px;" onmouseover="this.style.color='#ffffff'" onmouseout="this.style.color='#94A3B8'">&times;</button>
+        </div>
+
+        <!-- Scrollable Body -->
+        <div style="padding: 1.5rem; overflow-y: auto; flex: 1;">
+            
+            <!-- Cards Grid: School & Student + Parent & Delivery -->
+            <div style="display: grid; grid-template-columns: 1fr 1fr; gap: 1rem; margin-bottom: 1.25rem;">
+                
+                <!-- School & Student Card -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem;">
+                    <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #2563EB; margin-bottom: 0.6rem;">
+                        🏫 School &amp; Student
+                    </div>
+                    <div style="margin-bottom: 0.4rem;">
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">School:</span>
+                        <strong style="color: #1E2530; font-size: 0.88rem;" id="pdm-school-name">—</strong>
+                        <span id="pdm-school-code" style="font-size: 0.7rem; font-weight: 800; color: #FF6702; background: #FFF7ED; padding: 2px 6px; border-radius: 4px; margin-left: 4px;"></span>
+                    </div>
+                    <div style="margin-bottom: 0.4rem;">
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Student Name:</span>
+                        <strong style="color: #1E2530; font-size: 0.88rem;" id="pdm-student-name">—</strong>
+                    </div>
+                    <div>
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Class / Grade:</span>
+                        <strong style="color: #1E2530; font-size: 0.88rem;" id="pdm-grade-class">—</strong>
+                        <span id="pdm-gender" style="font-size: 0.72rem; background: #E2E8F0; padding: 2px 6px; border-radius: 4px; font-weight: 700; margin-left: 4px;"></span>
+                    </div>
+                </div>
+
+                <!-- Parent & Delivery Card -->
+                <div style="background: #F8FAFC; border: 1px solid #E2E8F0; border-radius: 12px; padding: 1rem;">
+                    <div style="font-size: 0.72rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #2563EB; margin-bottom: 0.6rem;">
+                        👨‍👩‍👧 Parent &amp; Contact
+                    </div>
+                    <div style="margin-bottom: 0.4rem;">
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Parent Name:</span>
+                        <strong style="color: #1E2530; font-size: 0.88rem;" id="pdm-parent-name">—</strong>
+                    </div>
+                    <div style="margin-bottom: 0.4rem;">
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Phone Number:</span>
+                        <div style="display: flex; align-items: center; gap: 8px;">
+                            <strong style="color: #0284C7; font-size: 0.88rem; font-family: monospace;" id="pdm-mobile">—</strong>
+                            <a id="pdm-wa-link" href="#" target="_blank" class="btn btn-outline btn-sm" style="padding: 2px 6px; font-size: 0.72rem; color: #16A34A; border-color: #BBF7D0; background: #F0FDF4; border-radius: 4px; text-decoration: none;">
+                                WhatsApp
+                            </a>
+                        </div>
+                    </div>
+                    <div style="margin-bottom: 0.4rem;" id="pdm-email-box">
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Email:</span>
+                        <span style="color: #475569; font-size: 0.82rem;" id="pdm-email">—</span>
+                    </div>
+                    <div>
+                        <span style="color: #64748B; font-size: 0.78rem; display: block;">Delivery Address:</span>
+                        <span style="color: #475569; font-size: 0.82rem;" id="pdm-address">—</span>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Payment Summary Banner -->
+            <div style="display: flex; justify-content: space-between; align-items: center; background: #FFF7ED; border: 1px solid #FED7AA; border-radius: 12px; padding: 0.85rem 1.25rem; margin-bottom: 1.25rem;">
+                <div>
+                    <div style="font-size: 0.82rem; color: #475569;">
+                        <strong>Payment Method:</strong> <span id="pdm-payment-method">UPI</span>
+                    </div>
+                    <div style="font-size: 0.8rem; color: #64748B; margin-top: 2px;">
+                        Gateway Reference: <span id="pdm-txn-id" style="font-family: monospace; font-weight: 700; color: #0284C7;">—</span>
+                    </div>
+                </div>
+                <div style="text-align: right;">
+                    <span style="font-size: 0.75rem; color: #9A3412; font-weight: 700; text-transform: uppercase; display: block;">Total Payable</span>
+                    <strong style="font-size: 1.25rem; font-weight: 800; color: #EA580C;" id="pdm-total-amount">₹0.00</strong>
+                </div>
+            </div>
+
+            <!-- Items Table -->
+            <div>
+                <div style="font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #334155; margin-bottom: 0.5rem; display: flex; justify-content: space-between; align-items: center;">
+                    <span>Uniform Requisition Items</span>
+                    <span id="pdm-items-count" style="font-size: 0.75rem; color: #64748B; text-transform: none; font-weight: 600;">0 items</span>
+                </div>
+                <div style="border: 1px solid #E2E8F0; border-radius: 10px; overflow: hidden;">
+                    <table style="width: 100%; border-collapse: collapse; font-size: 0.82rem;">
+                        <thead>
+                            <tr style="background: #F1F5F9; color: #475569; font-size: 0.72rem; text-transform: uppercase; letter-spacing: 0.03em;">
+                                <th style="padding: 0.6rem 0.8rem; text-align: left;">Item Description</th>
+                                <th style="padding: 0.6rem 0.8rem; text-align: center;">Size</th>
+                                <th style="padding: 0.6rem 0.8rem; text-align: center;">Qty</th>
+                                <th style="padding: 0.6rem 0.8rem; text-align: right;">Unit Price</th>
+                                <th style="padding: 0.6rem 0.8rem; text-align: right;">Total</th>
+                            </tr>
+                        </thead>
+                        <tbody id="pdm-items-tbody">
+                            <!-- Items populated by JS -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+
+        </div>
+
+        <!-- Footer -->
+        <div style="padding: 1rem 1.5rem; background: #F8FAFC; border-top: 1px solid #E2E8F0; display: flex; justify-content: space-between; align-items: center; flex-shrink: 0;">
+            <button type="button" id="pdm-mark-paid-btn" class="btn btn-primary" style="background: #10B981; border-color: #10B981; font-weight: 800; padding: 0.65rem 1.25rem; border-radius: 10px; display: inline-flex; align-items: center; gap: 6px;">
+                <span>✓</span> Mark as Paid &amp; Generate Order ID
+            </button>
+            <button type="button" onclick="closePendingDetailsModal()" class="btn btn-outline" style="padding: 0.65rem 1.25rem; font-weight: 700; border-radius: 10px;">
+                Close
+            </button>
+        </div>
+
+    </div>
 </div>
 
 <!-- Modal: Mark as Paid & Generate Order ID -->
@@ -581,13 +725,13 @@ require_once __DIR__ . '/header.php';
                 </div>
             </div>
 
-            <!-- Payment Method Radio / Select -->
+            <!-- Payment Method Select -->
             <div style="margin-bottom: 1rem;">
                 <label style="display: block; font-size: 0.78rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #475569; margin-bottom: 0.4rem;">
                     Payment Method Received <span style="color: #DC2626;">*</span>
                 </label>
-                <select name="payment_method" required
-                    <option value="" disabled selected>Select Payment Method</option> style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #ffffff;">
+                <select name="payment_method" required style="width: 100%; padding: 0.7rem 0.9rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #ffffff;">
+                    <option value="" disabled>Select Payment Method</option>
                     <option value="Cash">💵 Cash</option>
                     <option value="UPI" selected>📱 UPI</option>
                     <option value="Card">💳 Card</option>
@@ -634,6 +778,130 @@ require_once __DIR__ . '/header.php';
 </div>
 
 <script>
+window.pendingDataMap = <?= json_encode($pendingDataMap ?? [], JSON_HEX_TAG | JSON_HEX_APOS | JSON_HEX_QUOT | JSON_HEX_AMP) ?>;
+
+window.openPendingDetailsModal = function(orderId) {
+    const d = window.pendingDataMap ? window.pendingDataMap[orderId] : null;
+    if (!d) return;
+
+    document.getElementById('pdm-req-id').textContent = d.req_id;
+    document.getElementById('pdm-date').textContent = d.created_at;
+
+    const sb = document.getElementById('pdm-status-badge');
+    if (d.status === 'Failed') {
+        sb.textContent = '✕ FAILED';
+        sb.style.background = '#FEF2F2';
+        sb.style.color = '#DC2626';
+        sb.style.border = '1px solid #FECACA';
+    } else {
+        sb.textContent = '⏳ PENDING';
+        sb.style.background = '#FFFBEB';
+        sb.style.color = '#D97706';
+        sb.style.border = '1px solid #FDE68A';
+    }
+
+    document.getElementById('pdm-school-name').textContent = d.school_name;
+    const scEl = document.getElementById('pdm-school-code');
+    if (d.school_code) {
+        scEl.textContent = d.school_code;
+        scEl.style.display = 'inline-block';
+    } else {
+        scEl.style.display = 'none';
+    }
+
+    document.getElementById('pdm-student-name').textContent = d.student_name;
+    document.getElementById('pdm-grade-class').textContent = d.grade_class;
+    const gEl = document.getElementById('pdm-gender');
+    if (d.gender) {
+        gEl.textContent = d.gender;
+        gEl.style.display = 'inline-block';
+    } else {
+        gEl.style.display = 'none';
+    }
+
+    document.getElementById('pdm-parent-name').textContent = d.parent_name;
+    document.getElementById('pdm-mobile').textContent = d.mobile;
+    const waLink = document.getElementById('pdm-wa-link');
+    if (d.wa_url) {
+        waLink.href = d.wa_url;
+        waLink.style.display = 'inline-block';
+    } else {
+        waLink.style.display = 'none';
+    }
+
+    const emailBox = document.getElementById('pdm-email-box');
+    if (d.email) {
+        document.getElementById('pdm-email').textContent = d.email;
+        emailBox.style.display = 'block';
+    } else {
+        emailBox.style.display = 'none';
+    }
+
+    const fullAddr = (d.address || 'Not specified') + (d.pincode ? ' - ' + d.pincode : '');
+    document.getElementById('pdm-address').textContent = fullAddr;
+
+    document.getElementById('pdm-payment-method').textContent = d.payment_method;
+    document.getElementById('pdm-txn-id').textContent = d.txn_id || '—';
+    document.getElementById('pdm-total-amount').textContent = d.total_amount_formatted;
+
+    document.getElementById('pdm-items-count').textContent = d.items.length + (d.items.length === 1 ? ' item' : ' items');
+
+    const tbody = document.getElementById('pdm-items-tbody');
+    tbody.innerHTML = '';
+    if (d.items && d.items.length > 0) {
+        d.items.forEach(it => {
+            const tr = document.createElement('tr');
+            tr.style.borderBottom = '1px solid #E2E8F0';
+            const isAcc = /\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i.test(it.name || '');
+            const hasCustomSize = !isAcc && it.size && !['free', 'standard', 'n/a', 'none', '-'].includes(String(it.size).toLowerCase().trim());
+            const sizeDisplay = hasCustomSize 
+                ? `<span style="background:#F1F5F9; padding:2px 6px; border-radius:4px; font-weight:700; font-size:0.75rem;">Size ${it.size}</span>`
+                : `<span style="color:#94A3B8; font-weight:700;">—</span>`;
+            tr.innerHTML = `
+                <td style="padding: 0.65rem 0.8rem; font-weight: 700; color: #1E2530;">
+                    ${it.name}
+                </td>
+                <td style="padding: 0.65rem 0.8rem; text-align: center;">
+                    ${sizeDisplay}
+                </td>
+                <td style="padding: 0.65rem 0.8rem; text-align: center; font-weight: 700;">
+                    ${it.quantity}
+                </td>
+                <td style="padding: 0.65rem 0.8rem; text-align: right; color: #475569;">
+                    ₹${it.unit_price.toFixed(2)}
+                </td>
+                <td style="padding: 0.65rem 0.8rem; text-align: right; font-weight: 800; color: #1E2530;">
+                    ₹${it.total_price.toFixed(2)}
+                </td>
+            `;
+            tbody.appendChild(tr);
+        });
+    } else {
+        tbody.innerHTML = '<tr><td colspan="5" style="text-align: center; padding: 1.5rem; color: #64748B;">No items registered in this attempt.</td></tr>';
+    }
+
+    const markPaidBtn = document.getElementById('pdm-mark-paid-btn');
+    if (markPaidBtn) {
+        markPaidBtn.onclick = function() {
+            closePendingDetailsModal();
+            document.getElementById('modalOrderId').value = d.id;
+            document.getElementById('modalReqId').textContent = d.req_id;
+            document.getElementById('modalStudent').textContent = d.student_name + (d.school_name ? ' (' + d.school_name + ')' : '');
+            document.getElementById('modalParentPhone').textContent = d.parent_name + ' • ' + d.mobile;
+            document.getElementById('modalAmount').textContent = d.total_amount_formatted;
+            document.getElementById('markPaidModal').style.display = 'flex';
+        };
+    }
+
+    const modal = document.getElementById('pendingDetailsModal');
+    if (modal) modal.style.display = 'flex';
+};
+
+window.closePendingDetailsModal = function() {
+    const modal = document.getElementById('pendingDetailsModal');
+    if (modal) modal.style.display = 'none';
+};
+
 window.updateSubSchools = function(parentId) {
     const subSelect = document.getElementById('subSchoolSelect');
     if (!subSelect) return;
@@ -675,11 +943,20 @@ window.closeMarkPaidModal = function() {
 };
 
 document.addEventListener('DOMContentLoaded', () => {
-    const modal = document.getElementById('markPaidModal');
-    if (modal) {
-        modal.addEventListener('click', (e) => {
-            if (e.target === modal) {
+    const mModal = document.getElementById('markPaidModal');
+    if (mModal) {
+        mModal.addEventListener('click', (e) => {
+            if (e.target === mModal) {
                 closeMarkPaidModal();
+            }
+        });
+    }
+
+    const pdModal = document.getElementById('pendingDetailsModal');
+    if (pdModal) {
+        pdModal.addEventListener('click', (e) => {
+            if (e.target === pdModal) {
+                closePendingDetailsModal();
             }
         });
     }
