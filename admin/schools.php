@@ -63,55 +63,41 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
 
         if ($mode === 'single') {
             $name = trim($_POST['single_name'] ?? '');
-            $rawCode = trim($_POST['single_code'] ?? '');
             $location = trim($_POST['single_location'] ?? '');
             $contactPhone = trim($_POST['single_contact_phone'] ?? '');
 
             if (empty($name)) {
                 $err = 'School Name is mandatory.';
             } else {
-                $rawClean = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', $rawCode));
-                if (!empty($rawClean)) {
-                    $code = substr($rawClean, 0, 5);
-                    $taken = isSchoolCodeTaken($pdo, $code, ($action === 'update') ? $id : 0);
-                    if ($taken) {
-                        $err = "School code '{$code}' is already assigned to '{$taken['name']}'. School codes must be unique.";
-                    }
-                } else {
-                    $code = generateUniqueSchoolCode($pdo, $name, ($action === 'update') ? $id : 0);
-                }
+                $code = null;
+                $slug = generateSchoolSlug($pdo, $name, ($action === 'update') ? $id : null);
+                $city = !empty($location) ? $location : 'Trivandrum';
 
-                if (empty($err)) {
-                    $slug = generateSchoolSlug($pdo, $name, ($action === 'update') ? $id : null);
-                    $city = !empty($location) ? $location : 'Trivandrum';
+                try {
+                    if ($action === 'create') {
+                        $stmt = $pdo->prepare("INSERT INTO schools (name, slug, code, city, location, description, contact_phone, contact_email, logo, banner_image, parent_id, has_sub_schools, enable_class_selection, uniform_mode, applicable_classes, status, created_at) VALUES (?, ?, ?, ?, ?, '', ?, '', '', '', NULL, 0, 0, 'common', '', 1, NOW())");
+                        $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone]);
+                        $newId = (int)$pdo->lastInsertId();
 
-                    try {
-                        if ($action === 'create') {
-                            $stmt = $pdo->prepare("INSERT INTO schools (name, slug, code, city, location, description, contact_phone, contact_email, logo, banner_image, parent_id, has_sub_schools, enable_class_selection, uniform_mode, applicable_classes, status, created_at) VALUES (?, ?, ?, ?, ?, '', ?, '', '', '', NULL, 0, 0, 'common', '', 1, NOW())");
-                            $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone]);
-                            $newId = (int)$pdo->lastInsertId();
-
-                            // Assign uniform catalog for this school
-                            $prods = $pdo->query("SELECT id FROM products WHERE status = 1")->fetchAll(PDO::FETCH_COLUMN);
-                            $insSp = $pdo->prepare("INSERT IGNORE INTO school_products (school_id, product_id, is_mandatory) VALUES (?, ?, 0)");
-                            foreach ($prods as $pid) {
-                                $insSp->execute([$newId, $pid]);
-                            }
-
-                            clearFastCache();
-                            $msg = "SAVED SUCCESSFULLY";
-                            logActivity('create_school', 'schools', (int)$admin['id'], 'admin', "Created single school {$name} (#{$newId}) with code {$code}");
-                        } else {
-                            $stmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, city = ?, location = ?, contact_phone = ?, parent_id = NULL, has_sub_schools = 0 WHERE id = ?");
-                            $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone, $id]);
-                            clearFastCache();
-                            clearFastCache();
-                        $msg = "UPDATED SUCCESSFULLY";
-                            logActivity('update_school', 'schools', (int)$admin['id'], 'admin', "Updated school #{$id} with code {$code}");
+                        // Assign uniform catalog for this school
+                        $prods = $pdo->query("SELECT id FROM products WHERE status = 1")->fetchAll(PDO::FETCH_COLUMN);
+                        $insSp = $pdo->prepare("INSERT IGNORE INTO school_products (school_id, product_id, is_mandatory) VALUES (?, ?, 0)");
+                        foreach ($prods as $pid) {
+                            $insSp->execute([$newId, $pid]);
                         }
-                    } catch (Exception $e) {
-                        $err = $e->getMessage();
+
+                        clearFastCache();
+                        $msg = "SAVED SUCCESSFULLY";
+                        logActivity('create_school', 'schools', (int)$admin['id'], 'admin', "Created single school {$name} (#{$newId})");
+                    } else {
+                        $stmt = $pdo->prepare("UPDATE schools SET name = ?, slug = ?, code = ?, city = ?, location = ?, contact_phone = ?, parent_id = NULL, has_sub_schools = 0 WHERE id = ?");
+                        $stmt->execute([$name, $slug, $code, $city, $location, $contactPhone, $id]);
+                        clearFastCache();
+                        $msg = "UPDATED SUCCESSFULLY";
+                        logActivity('update_school', 'schools', (int)$admin['id'], 'admin', "Updated school #{$id}");
                     }
+                } catch (Exception $e) {
+                    $err = $e->getMessage();
                 }
             }
         } elseif ($mode === 'multi') {
@@ -179,18 +165,8 @@ if (($_SERVER['REQUEST_METHOD'] ?? 'GET') === 'POST') {
                 }
 
                 if (empty($err)) {
-                    // Common group code
-                    $rawCode = strtoupper(preg_replace('/[^A-Za-z0-9]/', '', trim($_POST['multi_code'] ?? '')));
-                    if (!empty($rawCode)) {
-                        $code = substr($rawCode, 0, 5);
-                        $taken = isSchoolCodeTaken($pdo, $code, ($action === 'update') ? $id : 0);
-                        if ($taken || in_array($code, $reservedCodes, true)) {
-                            $code = generateUniqueSchoolCode($pdo, $commonName, ($action === 'update') ? $id : 0, $reservedCodes);
-                        }
-                    } else {
-                        $code = generateUniqueSchoolCode($pdo, $commonName, ($action === 'update') ? $id : 0, $reservedCodes);
-                    }
-                    $reservedCodes[] = $code;
+                    // Common group code is not needed for main schools
+                    $code = null;
 
                     $slug = generateSchoolSlug($pdo, $commonName, ($action === 'update') ? $id : null);
                     if (empty($groupLocation) && !empty($cleanSubSchools[0]['location'])) {
@@ -500,15 +476,10 @@ foreach ($subs as $sub) {
                     2. Single School Details
                 </div>
 
-                <div style="display:grid; grid-template-columns: 1.5fr 0.8fr 1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
+                <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:1.25rem; margin-bottom:1.5rem;">
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Name *</label>
                         <input type="text" name="single_name" id="single_name_input" placeholder="Enter your School Name" class="form-control" required>
-                    </div>
-
-                    <div class="form-group">
-                        <label class="form-label" style="font-weight:700;">School Code (3 Letters) *</label>
-                        <input type="text" name="single_code" id="single_code_input" placeholder="Enter your School Code" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                     </div>
 
                     <div class="form-group">
@@ -806,7 +777,9 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                         <td>
                             <div style="font-weight:800; color:var(--brand-dark); font-size:0.95rem; display:flex; align-items:center; gap:6px;">
                                 <span><?= sanitize($s['name']) ?></span>
-                                <span style="font-size:0.75rem; font-weight:800; background:#FFF1E8; color:#FF6702; padding:2px 7px; border-radius:6px; border:1px solid #FED7AA; letter-spacing:0.5px;"><?= sanitize($s['code']) ?></span>
+                                <?php if (!empty($s['parent_id']) && !empty($s['code'])): ?>
+                                    <span style="font-size:0.75rem; font-weight:800; background:#FFF1E8; color:#FF6702; padding:2px 7px; border-radius:6px; border:1px solid #FED7AA; letter-spacing:0.5px;"><?= sanitize($s['code']) ?></span>
+                                <?php endif; ?>
                             </div>
                             <?php if (!empty($s['has_sub_schools'])): ?>
                                 <div style="margin-top:0.25rem;">
@@ -853,7 +826,7 @@ function handleMainSchoolDirectoryChange(mainSelect) {
                                 $viewData = [
                                     'id' => (int)$s['id'],
                                     'name' => $s['name'],
-                                    'code' => $s['code'] ?: 'ID: ' . $s['id'],
+                                    'code' => (!empty($s['parent_id']) && !empty($s['code'])) ? $s['code'] : '',
                                     'structure' => $structureType,
                                     'location' => $s['location'] ?: ($s['city'] ?: 'Trivandrum'),
                                     'contact_phone' => $s['contact_phone'] ?: 'No phone provided',
@@ -1027,14 +1000,10 @@ function handleMainSchoolDirectoryChange(mainSelect) {
 
             <!-- 1. Single School Edit Section -->
             <div id="sem-section-single" style="display:none;">
-                <div style="display:grid; grid-template-columns: 1.5fr 0.8fr 1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
+                <div style="display:grid; grid-template-columns: 2fr 1fr 1fr; gap:1.25rem; margin-bottom:1.25rem;">
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">School Name *</label>
                         <input type="text" name="single_name" id="sem-single-name" placeholder="Enter your School Name" class="form-control">
-                    </div>
-                    <div class="form-group">
-                        <label class="form-label" style="font-weight:700;">School Code (3 Letters) *</label>
-                        <input type="text" name="single_code" id="sem-single-code" placeholder="Enter your School Code" maxlength="3" class="form-control" style="text-transform:uppercase; font-weight:700; letter-spacing:1px;" oninput="this.value = this.value.replace(/[^A-Za-z]/g, '').toUpperCase().slice(0, 3);">
                     </div>
                     <div class="form-group">
                         <label class="form-label" style="font-weight:700;">Campus Location</label>
@@ -1142,7 +1111,15 @@ function openSchoolModal(data) {
     if (nameEl) nameEl.textContent = data.name || '';
 
     const codeEl = document.getElementById('svm-code');
-    if (codeEl) codeEl.textContent = data.code || '';
+    if (codeEl) {
+        if (data.parent_id && data.code) {
+            codeEl.textContent = data.code;
+            codeEl.style.display = 'inline-block';
+        } else {
+            codeEl.textContent = '';
+            codeEl.style.display = 'none';
+        }
+    }
 
     const locEl = document.getElementById('svm-location');
     if (locEl) locEl.textContent = data.location || '';
@@ -1224,15 +1201,15 @@ function openEditSchoolModal(data) {
         secSubSingle.style.display = 'none';
 
         // Prepopulate both single and multi form inputs so switching is seamless
-        document.getElementById('sem-single-name').value = data.name || '';
-        document.getElementById('sem-single-code').value = data.code || '';
-        document.getElementById('sem-single-location').value = data.location || '';
-        document.getElementById('sem-single-phone').value = data.contact_phone || '';
+        const elSName = document.getElementById('sem-single-name');
+        if (elSName) elSName.value = data.name || '';
+        const elSLoc = document.getElementById('sem-single-location');
+        if (elSLoc) elSLoc.value = data.location || '';
+        const elSPhone = document.getElementById('sem-single-phone');
+        if (elSPhone) elSPhone.value = data.contact_phone || '';
 
         const elMName = document.getElementById('sem-multi-name');
         if (elMName) elMName.value = data.name || '';
-        const elMCode = document.getElementById('sem-multi-code');
-        if (elMCode) elMCode.value = data.code || '';
         const elMLoc = document.getElementById('sem-multi-location');
         if (elMLoc) elMLoc.value = data.location || '';
         const elMPhone = document.getElementById('sem-multi-phone');
@@ -1308,15 +1285,16 @@ function semToggleSchoolType(targetMode) {
         }
 
         // Sync values from single to multi if multi is empty
-        const sName = document.getElementById('sem-single-name').value;
-        const sCode = document.getElementById('sem-single-code').value;
-        const sLoc = document.getElementById('sem-single-location').value;
-        const sPhone = document.getElementById('sem-single-phone').value;
+        const sNameEl = document.getElementById('sem-single-name');
+        const sLocEl = document.getElementById('sem-single-location');
+        const sPhoneEl = document.getElementById('sem-single-phone');
+
+        const sName = sNameEl ? sNameEl.value : '';
+        const sLoc = sLocEl ? sLocEl.value : '';
+        const sPhone = sPhoneEl ? sPhoneEl.value : '';
 
         const mName = document.getElementById('sem-multi-name');
         if (mName && !mName.value && sName) mName.value = sName;
-        const mCode = document.getElementById('sem-multi-code');
-        if (mCode && !mCode.value && sCode) mCode.value = sCode;
         const mLoc = document.getElementById('sem-multi-location');
         if (mLoc && !mLoc.value && sLoc) mLoc.value = sLoc;
         const mPhone = document.getElementById('sem-multi-phone');
@@ -1347,14 +1325,11 @@ function semToggleSchoolType(targetMode) {
 
         // Sync values from multi to single if single is empty
         const mName = document.getElementById('sem-multi-name') ? document.getElementById('sem-multi-name').value : '';
-        const mCode = document.getElementById('sem-multi-code') ? document.getElementById('sem-multi-code').value : '';
         const mLoc = document.getElementById('sem-multi-location') ? document.getElementById('sem-multi-location').value : '';
         const mPhone = document.getElementById('sem-multi-phone') ? document.getElementById('sem-multi-phone').value : '';
 
         const sName = document.getElementById('sem-single-name');
         if (sName && !sName.value && mName) sName.value = mName;
-        const sCode = document.getElementById('sem-single-code');
-        if (sCode && !sCode.value && mCode) sCode.value = mCode;
         const sLoc = document.getElementById('sem-single-location');
         if (sLoc && !sLoc.value && mLoc) sLoc.value = mLoc;
         const sPhone = document.getElementById('sem-single-phone');
@@ -1434,7 +1409,7 @@ document.addEventListener('DOMContentLoaded', function() {
     const schoolToEdit = <?= json_encode([
         'id' => (int)$editSchool['id'],
         'name' => $editSchool['name'],
-        'code' => $editSchool['code'] ?: '',
+        'code' => (!empty($editSchool['parent_id']) && !empty($editSchool['code'])) ? $editSchool['code'] : '',
         'location' => $editSchool['location'] ?: $editSchool['city'],
         'contact_phone' => $editSchool['contact_phone'] ?: '',
         'has_sub_schools' => (int)$editSchool['has_sub_schools'],

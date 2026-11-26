@@ -1210,8 +1210,8 @@ require_once __DIR__ . '/header.php';
                         <select name="school_id" id="schoolSelect" class="desk-select" required onchange="handleSchoolChange(this.value)">
                             <option value="">Select Partner School</option>
                             <?php foreach ($mainSchools as $ms): ?>
-                                <option value="<?= $ms['id'] ?>" data-code="<?= htmlspecialchars($ms['code']) ?>" data-hassub="<?= $ms['has_sub_schools'] ?>">
-                                    <?= htmlspecialchars($ms['name']) ?> (<?= htmlspecialchars($ms['code'] ?: 'ID: ' . $ms['id']) ?>)
+                                <option value="<?= $ms['id'] ?>" data-code="" data-hassub="<?= $ms['has_sub_schools'] ?>">
+                                    <?= htmlspecialchars($ms['name']) ?>
                                 </option>
                             <?php endforeach; ?>
                         </select>
@@ -1466,13 +1466,8 @@ function handleSchoolChange(schoolId) {
         return;
     }
 
-    const schoolCode = selOpt ? selOpt.getAttribute('data-code') : '';
-    if (schoolCode) {
-        schoolBadge.textContent = 'CODE: ' + schoolCode;
-        schoolBadge.style.display = 'inline-block';
-    } else {
-        schoolBadge.style.display = 'none';
-    }
+    // Main school never has a school code badge
+    schoolBadge.style.display = 'none';
 
     // Check if school has sub-schools
     const subSchools = SUB_SCHOOLS_MAP[schoolId] || [];
@@ -1496,6 +1491,16 @@ function handleSchoolChange(schoolId) {
 function handleSubSchoolChange(subSchoolId) {
     const mainSchoolId = document.getElementById('schoolSelect').value;
     const targetId = subSchoolId || mainSchoolId;
+    const schoolBadge = document.getElementById('schoolBadge');
+    const subSelect = document.getElementById('subSchoolSelect');
+    const selOpt = subSelect ? subSelect.options[subSelect.selectedIndex] : null;
+    const subCode = selOpt ? selOpt.getAttribute('data-code') : '';
+    if (subCode) {
+        schoolBadge.textContent = 'CODE: ' + subCode;
+        schoolBadge.style.display = 'inline-block';
+    } else {
+        schoolBadge.style.display = 'none';
+    }
     loadSchoolProducts(targetId);
 }
 
