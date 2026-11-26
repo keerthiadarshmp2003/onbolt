@@ -133,9 +133,19 @@ $searchMobile = trim($_GET['search'] ?? '');
 $statusFilter = trim($_GET['status'] ?? '');
 $schoolFilter = (int)($_GET['school_id'] ?? 0);
 $subSchoolFilter = (int)($_GET['sub_school_id'] ?? 0);
+$sortDate = strtolower(trim($_GET['sort_date'] ?? 'desc'));
+if (!in_array($sortDate, ['asc', 'desc'], true)) {
+    $sortDate = 'desc';
+}
+$dateFilter = trim($_GET['date_filter'] ?? '');
 
 // Base condition: Strictly records where official order_reference has NOT been generated yet
 $whereSql = "WHERE (o.order_reference IS NULL OR o.order_reference = '')";
+
+if (!empty($dateFilter) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFilter)) {
+    $quotedDate = $pdo->quote($dateFilter);
+    $whereSql .= " AND DATE(o.created_at) = {$quotedDate}";
+}
 
 if (!empty($statusFilter)) {
     if ($statusFilter === 'Failed') {
@@ -164,6 +174,10 @@ if (!empty($searchMobile)) {
 
 // KPI Metrics for Incomplete Attempts
 $kpiScope = "";
+if (!empty($dateFilter) && preg_match('/^\d{4}-\d{2}-\d{2}$/', $dateFilter)) {
+    $quotedDate = $pdo->quote($dateFilter);
+    $kpiScope .= " AND DATE(o.created_at) = {$quotedDate}";
+}
 if ($subSchoolFilter > 0) {
     $kpiScope .= " AND o.school_id = {$subSchoolFilter}";
 } elseif ($schoolFilter > 0) {
@@ -186,13 +200,14 @@ $failedCount = (int)$pdo->query("SELECT COUNT(*) FROM orders o LEFT JOIN schools
 $potentialValue = (float)$pdo->query("SELECT COALESCE(SUM(o.total_amount), 0) FROM orders o LEFT JOIN schools s ON o.school_id = s.id WHERE (o.order_reference IS NULL OR o.order_reference = '') {$kpiScope}")->fetchColumn();
 
 // Fetch Pending/Failed records
+$sortSql = ($sortDate === 'asc') ? 'ASC' : 'DESC';
 $query = "SELECT o.*, s.name as school_name, s.code as school_code,
                  p.transaction_ref as gateway_txn_ref, p.payment_method as gateway_mode, p.gateway_response
           FROM orders o
           LEFT JOIN schools s ON o.school_id = s.id
           LEFT JOIN payments p ON p.order_id = o.id
           {$whereSql}
-          ORDER BY o.id DESC";
+          ORDER BY o.created_at {$sortSql}, o.id {$sortSql}";
 
 $pendingList = $pdo->query($query)->fetchAll(PDO::FETCH_ASSOC);
 
@@ -286,37 +301,34 @@ require_once __DIR__ . '/header.php';
     <form method="GET" action="pending_transactions.php" style="display: flex; flex-wrap: wrap; gap: 1rem; align-items: flex-end;">
         
         <!-- Mobile / Search Input -->
-        <div style="flex: 1 1 240px;">
+        <div style="flex: 1 1 220px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
-                🔍 Parent Registered Mobile / Request ID
+                Parent Registered Mobile / Request ID
             </label>
-            <div style="position: relative;">
-                <input type="text" name="search" value="<?= htmlspecialchars($searchMobile) ?>" 
-                       placeholder="Enter your Mobile Number or Request ID" 
-                       style="width: 100%; padding: 0.65rem 1rem 0.65rem 2.4rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <span style="position: absolute; left: 0.85rem; top: 50%; transform: translateY(-50%); color: #94A3B8; font-size: 1rem;">📱</span>
-            </div>
+            <input type="text" name="search" value="<?= htmlspecialchars($searchMobile) ?>" 
+                   placeholder="Enter your Mobile Number or Request ID" 
+                   style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
         </div>
 
-        <!-- Status Filter -->
+        <!-- Gateway Status Filter -->
         <div style="flex: 0 1 150px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 Gateway Status
             </label>
             <select name="status" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="">Select Gateway Status</option>
-                <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>⏳ Pending</option>
-                <option value="Failed" <?= $statusFilter === 'Failed' ? 'selected' : '' ?>>✕ Failed / Dropped</option>
+                <option value="">Select your Gateway Status</option>
+                <option value="Pending" <?= $statusFilter === 'Pending' ? 'selected' : '' ?>>Pending</option>
+                <option value="Failed" <?= $statusFilter === 'Failed' ? 'selected' : '' ?>>Failed / Dropped</option>
             </select>
         </div>
 
         <!-- School Filter -->
-        <div style="flex: 1 1 200px;">
+        <div style="flex: 1 1 180px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 School Filter
             </label>
             <select name="school_id" id="schoolSelect" onchange="updateSubSchools(this.value)" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="0">Select School</option>
+                <option value="0">Select your School</option>
                 <?php foreach ($mainSchools as $ms): ?>
                     <option value="<?= $ms['id'] ?>" <?= $schoolFilter === (int)$ms['id'] ? 'selected' : '' ?>>
                         <?= htmlspecialchars($ms['name']) ?>
@@ -326,12 +338,12 @@ require_once __DIR__ . '/header.php';
         </div>
 
         <!-- Sub-School / Campus Filter -->
-        <div style="flex: 1 1 200px;">
+        <div style="flex: 1 1 180px;">
             <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
                 Sub-School / Campus
             </label>
             <select name="sub_school_id" id="subSchoolSelect" style="width: 100%; padding: 0.65rem 1rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
-                <option value="0">Select School</option>
+                <option value="0">Select your Sub School</option>
                 <?php foreach ($underSchools as $sub): 
                     $matchParent = ($schoolFilter === 0 || (int)$sub['parent_id'] === $schoolFilter);
                 ?>
@@ -345,12 +357,32 @@ require_once __DIR__ . '/header.php';
             </select>
         </div>
 
+        <!-- Date Filter -->
+        <div style="flex: 0 1 150px;">
+            <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
+                Date Filter
+            </label>
+            <input type="date" name="date_filter" value="<?= htmlspecialchars($dateFilter) ?>" 
+                   style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.88rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
+        </div>
+
+        <!-- Sort by Date -->
+        <div style="flex: 0 1 140px;">
+            <label style="display: block; font-size: 0.75rem; font-weight: 800; text-transform: uppercase; letter-spacing: 0.05em; color: #64748B; margin-bottom: 0.35rem;">
+                Sort by Date
+            </label>
+            <select name="sort_date" style="width: 100%; padding: 0.65rem 0.85rem; border: 1.5px solid #CBD5E1; border-radius: 10px; font-size: 0.9rem; font-weight: 600; color: #1E2530; background: #F8FAFC;">
+                <option value="desc" <?= $sortDate === 'desc' ? 'selected' : '' ?>>Newest First</option>
+                <option value="asc" <?= $sortDate === 'asc' ? 'selected' : '' ?>>Oldest First</option>
+            </select>
+        </div>
+
         <!-- Filter Action Buttons -->
         <div style="display: flex; gap: 0.5rem;">
             <button type="submit" class="btn btn-primary" style="padding: 0.65rem 1.4rem; font-weight: 700; border-radius: 10px; display: inline-flex; align-items: center; gap: 0.4rem;">
                 <span>Filter</span>
             </button>
-            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0 || $subSchoolFilter > 0): ?>
+            <?php if (!empty($searchMobile) || !empty($statusFilter) || $schoolFilter > 0 || $subSchoolFilter > 0 || !empty($dateFilter) || $sortDate !== 'desc'): ?>
                 <a href="pending_transactions.php" class="btn btn-outline" style="padding: 0.65rem 1rem; font-weight: 600; border-radius: 10px; text-decoration: none;">
                     Reset
                 </a>
@@ -365,11 +397,19 @@ require_once __DIR__ . '/header.php';
     <table class="admin-table">
         <thead>
             <tr>
-                <th style="width: 140px;">Request ID</th>
+                <th style="width: 130px;">Request ID</th>
+                <th style="min-width: 130px;">
+                    <a href="?<?= http_build_query(array_merge($_GET, ['sort_date' => $sortDate === 'asc' ? 'desc' : 'asc'])) ?>" 
+                       style="color: inherit; text-decoration: none; display: inline-flex; align-items: center; gap: 4px;" 
+                       title="Sort by Date (Currently <?= $sortDate === 'asc' ? 'Oldest First - Click for Newest' : 'Newest First - Click for Oldest' ?>)">
+                        Date
+                        <span style="font-size: 0.75rem; color: #EA580C; font-weight: 800;"><?= $sortDate === 'asc' ? '▲' : '▼' ?></span>
+                    </a>
+                </th>
                 <th style="min-width: 160px;">Parent Details</th>
                 <th style="min-width: 150px;">Student &amp; Class</th>
                 <th style="min-width: 150px;">School</th>
-                <th style="min-width: 140px;">Items</th>
+                <th style="min-width: 100px;">Items</th>
                 <th style="width: 110px; text-align: right;">Amount</th>
                 <th style="width: 130px; text-align: center;">Status</th>
             </tr>
@@ -377,7 +417,7 @@ require_once __DIR__ . '/header.php';
         <tbody>
             <?php if (empty($pendingList)): ?>
                 <tr>
-                    <td colspan="7" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
+                    <td colspan="8" style="text-align: center; padding: 4rem 2rem; color: #64748B;">
                         <div style="font-size: 3rem; margin-bottom: 0.5rem;">🎉</div>
                         <div style="font-size: 1.15rem; font-weight: 800; color: #1E2530;">No Incomplete Attempts Found</div>
                         <p style="font-size: 0.88rem; margin-top: 0.25rem;">
@@ -404,6 +444,16 @@ require_once __DIR__ . '/header.php';
                         <span style="font-family: monospace; font-size: 0.88rem; font-weight: 800; color: #475569; background: #F1F5F9; padding: 4px 8px; border-radius: 6px; display: inline-block;">
                             <?= htmlspecialchars($displayReqId) ?>
                         </span>
+                    </td>
+
+                    <!-- Date -->
+                    <td>
+                        <div style="font-weight: 700; color: #1E2530; font-size: 0.85rem; white-space: nowrap;">
+                            <?= !empty($row['created_at']) ? date('d M Y', strtotime($row['created_at'])) : '—' ?>
+                        </div>
+                        <div style="font-size: 0.72rem; color: #64748B; margin-top: 2px; white-space: nowrap;">
+                            <?= !empty($row['created_at']) ? date('h:i A', strtotime($row['created_at'])) : '' ?>
+                        </div>
                     </td>
 
                     <!-- Parent Details -->
