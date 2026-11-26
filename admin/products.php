@@ -564,9 +564,9 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                 School:
             </label>
             <select id="prod_main_school_picker" class="form-control" style="font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:230px; border:1.5px solid #CBD5E1; background:#ffffff;" onchange="handleMainSchoolChange(this.value)">
-                <option value="" disabled>Select your School</option>
+                <option value="" selected>Select your School</option>
                 <?php foreach ($mainSchools as $ms): ?>
-                    <option value="<?= $ms['id'] ?>" <?= $parentSchoolId === (int)$ms['id'] ? 'selected' : '' ?>>
+                    <option value="<?= $ms['id'] ?>">
                         <?= sanitize($ms['name']) ?>
                     </option>
                 <?php endforeach; ?>
@@ -612,7 +612,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                 <div class="sub-school-multiselect" style="position:relative; min-width:280px;">
                     <button type="button" id="subSchoolDropdownBtn" onclick="toggleSubSchoolDropdown(event)" class="form-control" style="display:flex; justify-content:space-between; align-items:center; font-weight:700; font-size:0.88rem; color:var(--brand-dark); padding:0.5rem 0.85rem; border-radius:var(--radius-md); min-width:280px; border:1.5px solid #CBD5E1; background:#ffffff; cursor:pointer; text-align:left;">
                         <span id="subSchoolBtnLabel" style="overflow:hidden; text-overflow:ellipsis; white-space:nowrap; max-width:240px;">
-                            <?= htmlspecialchars($subBtnInitialLabel) ?>
+                            Select your Sub School
                         </span>
                         <svg id="subSchoolArrowIcon" width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="#64748B" stroke-width="2.5" style="margin-left:8px; transition:transform 0.2s; flex-shrink:0;">
                             <polyline points="6 9 12 15 18 9"></polyline>
@@ -1000,7 +1000,11 @@ $schoolUniforms = $stmtUniforms->fetchAll();
 <!-- Client-side Strict 500 KB Limit File Validation & Drawer Toggle Script -->
 <script>
 function handleMainSchoolChange(mainSchoolId) {
-    window.location.href = '<?= BASE_URL ?>/admin/products.php?school_id=' + encodeURIComponent(mainSchoolId);
+    if (!mainSchoolId) {
+        window.location.href = '<?= BASE_URL ?>/admin/products.php';
+    } else {
+        window.location.href = '<?= BASE_URL ?>/admin/products.php?school_id=' + encodeURIComponent(mainSchoolId);
+    }
 }
 
 function toggleSubSchoolDropdown(e) {
@@ -1037,15 +1041,7 @@ function updateSubSchoolDisplay() {
     }
 
     if (label) {
-        if (checkedCount === 0) {
-            label.textContent = 'Select your Sub School';
-        } else if (checkedCount === total) {
-            label.textContent = 'All Sub Schools (Combined Catalog)';
-        } else if (checkedCount === 1) {
-            label.textContent = checkedBoxes[0].getAttribute('data-name') || '1 Sub School';
-        } else {
-            label.textContent = `${checkedCount} Sub Schools Selected`;
-        }
+        label.textContent = 'Select your Sub School';
     }
 }
 
