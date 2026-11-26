@@ -80,31 +80,40 @@ if (isset($_GET['ajax_get_school_products'])) {
 
     // Attach variants for each product
     foreach ($products as &$prod) {
-        $vStmt = $pdo->prepare("SELECT id, product_id, size, color, sku, price_override, stock_quantity 
-                                FROM product_variants 
-                                WHERE product_id = ? AND status = 1 
-                                ORDER BY id ASC");
-        $vStmt->execute([$prod['id']]);
-        $prodVariants = $vStmt->fetchAll(PDO::FETCH_ASSOC);
+        $grp = strtolower($prod['uniform_group'] ?? 'academic');
+        $isAccessory = ($grp === 'accessories') || preg_match('/\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i', $prod['name']);
 
-        // If no rows in product_variants, generate variants from available_sizes
-        if (empty($prodVariants) && !empty($prod['available_sizes'])) {
-            $sizes = array_map('trim', explode(',', (string)$prod['available_sizes']));
-            foreach ($sizes as $idx => $s) {
-                if ($s !== '') {
-                    $prodVariants[] = [
-                        'id' => null,
-                        'product_id' => $prod['id'],
-                        'size' => $s,
-                        'color' => null,
-                        'sku' => $prod['sku'] ? $prod['sku'] . '-' . $s : null,
-                        'price_override' => null,
-                        'stock_quantity' => 999
-                    ];
+        if ($isAccessory) {
+            $prod['variants'] = [];
+            $prod['has_size'] = false;
+        } else {
+            $vStmt = $pdo->prepare("SELECT id, product_id, size, color, sku, price_override, stock_quantity 
+                                    FROM product_variants 
+                                    WHERE product_id = ? AND status = 1 
+                                    ORDER BY id ASC");
+            $vStmt->execute([$prod['id']]);
+            $prodVariants = $vStmt->fetchAll(PDO::FETCH_ASSOC);
+
+            // If no rows in product_variants, generate variants from available_sizes
+            if (empty($prodVariants) && !empty($prod['available_sizes'])) {
+                $sizes = array_map('trim', explode(',', (string)$prod['available_sizes']));
+                foreach ($sizes as $idx => $s) {
+                    if ($s !== '') {
+                        $prodVariants[] = [
+                            'id' => null,
+                            'product_id' => $prod['id'],
+                            'size' => $s,
+                            'color' => null,
+                            'sku' => $prod['sku'] ? $prod['sku'] . '-' . $s : null,
+                            'price_override' => null,
+                            'stock_quantity' => 999
+                        ];
+                    }
                 }
             }
+            $prod['variants'] = $prodVariants;
+            $prod['has_size'] = !empty($prodVariants);
         }
-        $prod['variants'] = $prodVariants;
         $prod['formatted_price'] = formatCurrency((float)$prod['effective_price']);
     }
 
@@ -432,7 +441,10 @@ if (isset($_GET['print_receipt'])) {
                                 <div style="font-size:10px; color:#64748b;">SKU: <?= htmlspecialchars($it['sku']) ?></div>
                             <?php endif; ?>
                         </td>
-                        <td style="text-align:center; font-weight:700;"><?= htmlspecialchars($it['size']) ?></td>
+                        <?php
+                        $itIsAcc = empty($it['size']) || in_array(strtolower(trim($it['size'])), ['standard', 'none', '-', 'n/a']) || preg_match('/\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i', $it['product_name']);
+                        ?>
+                        <td style="text-align:center; font-weight:700;"><?= $itIsAcc ? '<span style="color:#94a3b8;">—</span>' : htmlspecialchars($it['size']) ?></td>
                         <td style="text-align:center; font-weight:700;"><?= (int)$it['quantity'] ?></td>
                         <td style="text-align:right;"><?= formatCurrency((float)$it['unit_price']) ?></td>
                         <td style="text-align:right; font-weight:700;"><?= formatCurrency((float)$it['total_price']) ?></td>
@@ -1558,15 +1570,22 @@ function renderProductCatalog(products) {
         const imgUrl = p.featured_image ? (p.featured_image.startsWith('http') ? p.featured_image : '<?= BASE_URL ?>/' + p.featured_image.replace(/^\/+/, '')) : '<?= BASE_URL ?>/assets/images/placeholder-product.png';
         const groupLabel = p.uniform_group ? p.uniform_group.toUpperCase() : (p.category_name || 'UNIFORM');
 
-        // Variants / Sizes Buttons - Do NOT auto-select
-        let sizeButtonsHtml = '';
-        const variants = p.variants || [];
-        if (variants.length > 0) {
-            variants.forEach((v) => {
+        // Variants / Sizes Buttons - Do NOT auto-select & completely hide for accessories
+        const isAccessory = (p.uniform_group || '').toLowerCase() === 'accessories' || /\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i.test(p.name);
+        const hasSize = !isAccessory && (p.has_size !== false) && (p.variants && p.variants.length > 0);
+
+        let sizeSectionHtml = '';
+        if (hasSize) {
+            let sizeButtonsHtml = '';
+            p.variants.forEach((v) => {
                 sizeButtonsHtml += `<button type="button" class="size-btn" data-size="${v.size}" data-vid="${v.id || ''}" onclick="selectCardSize(this, ${p.id})">${v.size}</button>`;
             });
-        } else {
-            sizeButtonsHtml = `<button type="button" class="size-btn" data-size="Standard" data-vid="" onclick="selectCardSize(this, ${p.id})">Standard</button>`;
+            sizeSectionHtml = `
+                <div style="font-size:0.7rem; font-weight:700; color:#64748b; margin-bottom:3px;">Select Size:</div>
+                <div class="prod-size-picker" id="sizePicker-${p.id}">
+                    ${sizeButtonsHtml}
+                </div>
+            `;
         }
 
         card.innerHTML = `
@@ -1577,10 +1596,7 @@ function renderProductCatalog(products) {
             <h4 class="prod-name" title="${p.name}">${p.name}</h4>
             <div class="prod-price-tag">${p.formatted_price}</div>
             
-            <div style="font-size:0.7rem; font-weight:700; color:#64748b; margin-bottom:3px;">Select Size:</div>
-            <div class="prod-size-picker" id="sizePicker-${p.id}">
-                ${sizeButtonsHtml}
-            </div>
+            ${sizeSectionHtml}
 
             <button type="button" class="prod-add-btn" onclick="addToOrder(${p.id})">
                 <span>+ Add to Order</span>
@@ -1630,22 +1646,28 @@ function addToOrder(prodId) {
     const prod = CURRENT_PRODUCTS.find(p => parseInt(p.id) === parseInt(prodId));
     if (!prod) return;
 
-    // Resolve selected size - require explicit user selection
-    const picker = document.getElementById('sizePicker-' + prodId);
-    const activeSizeBtn = picker ? picker.querySelector('.size-btn.active') : null;
-    
-    if (!activeSizeBtn) {
-        alert('Please select a size for "' + prod.name + '" first.');
-        if (picker) {
-            picker.style.outline = '2px solid #FF6702';
-            picker.style.borderRadius = '4px';
-            setTimeout(() => { picker.style.outline = 'none'; }, 1800);
-        }
-        return;
-    }
+    const isAccessory = (prod.uniform_group || '').toLowerCase() === 'accessories' || /\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i.test(prod.name);
+    const hasSize = !isAccessory && (prod.has_size !== false) && (prod.variants && prod.variants.length > 0);
 
-    const selectedSize = activeSizeBtn.getAttribute('data-size');
-    const variantId = activeSizeBtn.getAttribute('data-vid');
+    let selectedSize = '';
+    let variantId = null;
+
+    if (hasSize) {
+        const picker = document.getElementById('sizePicker-' + prodId);
+        const activeSizeBtn = picker ? picker.querySelector('.size-btn.active') : null;
+        
+        if (!activeSizeBtn) {
+            alert('Please select a size for "' + prod.name + '" first.');
+            if (picker) {
+                picker.style.outline = '2px solid #FF6702';
+                picker.style.borderRadius = '4px';
+                setTimeout(() => { picker.style.outline = 'none'; }, 1800);
+            }
+            return;
+        }
+        selectedSize = activeSizeBtn.getAttribute('data-size');
+        variantId = activeSizeBtn.getAttribute('data-vid');
+    }
 
     // Check if identical item (same product ID & size) already in cart
     const existingIndex = ORDER_CART.findIndex(item => item.product_id === prod.id && item.size === selectedSize);
@@ -1656,6 +1678,7 @@ function addToOrder(prodId) {
             product_id: prod.id,
             name: prod.name,
             size: selectedSize,
+            has_size: hasSize,
             variant_id: variantId ? parseInt(variantId) : null,
             price: parseFloat(prod.effective_price),
             quantity: 1,
@@ -1666,7 +1689,8 @@ function addToOrder(prodId) {
     renderCart();
 
     // Visual button feedback
-    const btn = picker.parentElement.querySelector('.prod-add-btn');
+    const cardEl = document.querySelector(`.prod-card[data-id="${prodId}"]`);
+    const btn = cardEl ? cardEl.querySelector('.prod-add-btn') : null;
     if (btn) {
         const orig = btn.innerHTML;
         btn.innerHTML = '<span>✓ Added!</span>';
@@ -1718,12 +1742,15 @@ function renderCart() {
             const lineTotal = item.price * item.quantity;
             subtotal += lineTotal;
 
+            const isAcc = !item.has_size || !item.size || ['standard', 'none', '-', 'n/a'].includes(String(item.size).toLowerCase().trim()) || /\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i.test(item.name || '');
+            const sizeBadgeHtml = isAcc ? '' : `<span class="cart-item-size-badge">Size: ${item.size}</span>`;
+
             const row = document.createElement('div');
             row.className = 'cart-item-row';
             row.innerHTML = `
                 <div>
                     <div class="cart-item-title">${item.name}</div>
-                    <span class="cart-item-size-badge">Size: ${item.size}</span>
+                    ${sizeBadgeHtml}
                     <div style="font-size:0.75rem; color:#64748b; margin-top:2px;">₹ ${item.price.toFixed(2)} each</div>
                 </div>
                 <div style="text-align:right;">

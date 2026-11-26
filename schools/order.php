@@ -1429,8 +1429,8 @@ require_once __DIR__ . '/../includes/header.php';
             // Helper function to render product cards
             $renderCard = function($prod) {
                 $grp = strtolower($prod['uniform_group'] ?? 'academic');
-                $isAccessory = ($grp === 'accessories') || preg_match('/\b(belt|socks|sock|cap|tie|bag|badge)\b/i', $prod['name']);
-                $needsSize = !$isAccessory && !empty($prod['available_sizes']) && trim($prod['available_sizes']) !== 'NONE';
+                $isAccessory = ($grp === 'accessories') || preg_match('/\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i', $prod['name']);
+                $needsSize = !$isAccessory && !empty($prod['available_sizes']) && trim($prod['available_sizes']) !== 'NONE' && trim($prod['available_sizes']) !== 'Standard Bundle';
             ?>
                 <div class="product-order-card" 
                      id="card-prod-<?= $prod['id'] ?>" 
@@ -2809,7 +2809,8 @@ require_once __DIR__ . '/../includes/header.php';
             totalAmount += lineTotal;
 
             const card = document.getElementById('card-prod-' + pid);
-            const hasSize = card ? (card.dataset.hasSize !== '0') : (it.hasSize !== false && it.hasSize !== '0' && it.size && it.size !== 'Standard');
+            const isAcc = (card && card.dataset.group === 'accessories') || /\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i.test(it.name || '');
+            const hasSize = !isAcc && (card ? (card.dataset.hasSize !== '0') : (it.hasSize !== false && it.hasSize !== '0' && it.size && it.size !== 'Standard'));
             const sizesRaw = card ? card.dataset.sizes : '';
             const sizeList = sizesRaw ? sizesRaw.split(',').map(s => s.trim()).filter(Boolean) : (hasSize ? ['24','26','28','30','32','34','36','38','40','42','44','46'] : []);
 

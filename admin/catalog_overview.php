@@ -377,6 +377,8 @@ require_once __DIR__ . '/header.php';
                             $imgSrc = !empty($row['featured_image']) ? BASE_URL . '/' . ltrim($row['featured_image'], '/') : '';
                             
                             // JSON data for view-only modal
+                            $isAccessory = ($row['uniform_group'] ?? '') === 'accessories' || preg_match('/\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i', $row['item_name']);
+                            $sizesDisplay = $isAccessory ? '—' : (!empty($row['available_sizes']) ? $row['available_sizes'] : '—');
                             $modalData = htmlspecialchars(json_encode([
                                 'name' => $row['item_name'],
                                 'sku' => $row['sku'],
@@ -385,7 +387,7 @@ require_once __DIR__ . '/header.php';
                                 'product_rate' => number_format((float)$row['product_rate'], 2),
                                 'vendor_commission' => number_format((float)$row['vendor_commission'], 2),
                                 'total_mrp' => number_format((float)$row['total_mrp'], 2),
-                                'sizes' => $row['available_sizes'] ?? 'N/A',
+                                'sizes' => $sizesDisplay,
                                 'description' => $row['description'] ?? $row['short_description'] ?? 'No additional description provided.',
                                 'image' => $imgSrc,
                                 'is_mandatory' => (bool)$row['is_mandatory'],

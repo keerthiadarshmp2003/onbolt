@@ -822,9 +822,12 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                                 <?= formatCurrency((float)($u['custom_price'] ?: $u['base_price'])) ?>
                             </span>
                         </td>
+                        <?php
+                        $isAcc = ($u['uniform_group'] ?? '') === 'accessories' || preg_match('/\b(belt|socks?|cap|tie|bag|badge|bottle|mask)\b/i', $u['product_name']);
+                        ?>
                         <td style="vertical-align:middle;">
                             <span style="font-size:0.85rem; color:var(--brand-muted); font-weight:600;">
-                                <?= sanitize($u['available_sizes']) ?>
+                                <?= $isAcc || empty($u['available_sizes']) ? '—' : sanitize($u['available_sizes']) ?>
                             </span>
                         </td>
                         <td style="text-align:right; vertical-align:middle;">
@@ -842,7 +845,7 @@ $schoolUniforms = $stmtUniforms->fetchAll();
                                             "actual_price" => formatCurrency((float)$u["actual_price"]),
                                             "vendor_commission" => formatCurrency((float)$u["vendor_commission"]),
                                             "combined_total" => formatCurrency((float)($u["custom_price"] ?: $u["base_price"])),
-                                            "sizes" => (string)($u["available_sizes"] ?: "Standard Size"),
+                                            "sizes" => $isAcc ? "—" : (string)($u["available_sizes"] ?: "Standard Size"),
                                             "is_mandatory" => !empty($u["is_mandatory"]) ? "Mandatory Item" : "Optional Apparel",
                                             "is_kit" => !empty($u["is_kit"]) ? "Uniform Kit" : "Single Item",
                                             "description" => (string)(!empty($u["description"]) ? $u["description"] : "Approved institutional garment manufactured with high-durability fabric for students."),
