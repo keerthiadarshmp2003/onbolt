@@ -250,26 +250,31 @@ document.addEventListener('DOMContentLoaded', function() {
         const labels = <?= json_encode($donutLabels) ?>;
         const counts = <?= json_encode($donutCounts) ?>;
 
+        const brandPalette = [
+            '#FF6702', // 1. OnBolt Electric Bolt Orange (Primary Brand)
+            '#1E2530', // 2. OnBolt Graphite Dark Charcoal (Secondary Brand)
+            '#F59E0B', // 3. Warm Golden Amber (3rd School)
+            '#10B981', // 4. Emerald Green (4th School)
+            '#0284C7', // 5. Sky Ocean Blue (5th School)
+            '#8B5CF6', // 6. Royal Violet (6th School)
+            '#EC4899', // 7. Modern Rose Pink (7th School)
+            '#14B8A6', // 8. Deep Teal (8th School)
+            '#64748B', // 9. Elegant Slate Gray (9th School)
+            '#F97316', // 10. Warm Tangerine (10th School)
+            '#3B82F6', // 11. Indigo Blue (11th School)
+            '#84CC16'  // 12. Lime Accent (12th School)
+        ];
+
+        // Dynamically assign colors based on total schools
+        const backgroundColors = labels.map((_, i) => brandPalette[i % brandPalette.length]);
+
         new Chart(schoolCtx, {
             type: 'doughnut',
             data: {
                 labels: labels,
                 datasets: [{
                     data: counts,
-                    backgroundColor: [
-                        '#FF6702', // OnBolt Primary Brand Orange
-                        '#1E2530', // OnBolt Graphite Dark Charcoal
-                        '#F59E0B', // Warm Amber
-                        '#10B981', // Emerald Green
-                        '#64748B'  // Muted Slate
-                    ],
-                    hoverBackgroundColor: [
-                        '#E55A00',
-                        '#2B3444',
-                        '#D97706',
-                        '#059669',
-                        '#475569'
-                    ],
+                    backgroundColor: backgroundColors,
                     borderWidth: 0,
                     hoverOffset: 4
                 }]
